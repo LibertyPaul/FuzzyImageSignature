@@ -92,8 +92,8 @@ public class ImageRecognizer{
 	}
 	
 	//эта функция считает сколько примерно должна занимать 1 метка в зависимости от разрешения фото
-	protected double getErrorValue(){
-		return Math.min(this.srcImage.width(), this.srcImage.height()) * 0.01;
+	protected double getAnchorSize(){
+		return Math.min(this.srcImage.width(), this.srcImage.height()) * 0.025;
 	}
 	
 	protected boolean isSameLine(Point p1, Point p2, Point p3){
@@ -105,7 +105,7 @@ public class ImageRecognizer{
 		//находим длинну высоты, брошенной от точки к прямой
 		double D = Math.abs(A * p2.x + B*p2.y + C) / Math.sqrt(A * A + B * B);
 		
-		return D < this.getErrorValue();
+		return D < this.getAnchorSize();
 	}
 	
 	protected boolean isSameLine(ThreePoints threePoints){
@@ -146,6 +146,31 @@ public class ImageRecognizer{
 		return ratio;
 	}
 	
+	protected void dumpImageWithLines(String dstPath, List<ThreePoints> lines){
+		Mat image = this.srcImage.clone();
+		Random rg = new Random();
+		
+		for(ThreePoints line : lines){
+			Scalar color = new Scalar(rg.nextInt(255), rg.nextInt(255), rg.nextInt(255));
+			Imgproc.line(image, line.getFirst(), line.getLast(), color, 2, Core.LINE_4, 0);
+			
+			int radius = (int)this.getAnchorSize();
+			Imgproc.circle(image, line.getFirst(), radius, color, 5, Core.FILLED, 0);
+			Imgproc.circle(image, line.getBetween(), radius, color, 5, Core.FILLED, 0);
+			Imgproc.circle(image, line.getLast(), radius, color, 5, Core.FILLED, 0);
+			
+			Point middle12 = ThreePoints.getMiddle(line.getFirst(), line.getBetween());
+			double distance12 = ThreePoints.getDistance(line.getFirst(), line.getBetween());
+			Imgproc.putText(image, String.format("%.2f", distance12), middle12, Core.FONT_HERSHEY_COMPLEX, 2, color);
+			
+			Point middle23 = ThreePoints.getMiddle(line.getLast(), line.getBetween());
+			double distance23 = ThreePoints.getDistance(line.getLast(), line.getBetween());
+			Imgproc.putText(image, String.format("%.2f", distance23), middle23, Core.FONT_HERSHEY_COMPLEX, 2, color);
+		}
+		
+		Imgcodecs.imwrite(dstPath, image);
+	}
+	
 	//getPageCoords ищет на изображении метки, по которым определяет границы
 	public boolean recognize() throws Exception{
 		List<MatOfPoint> countors = this.getFilteredCountors();
@@ -167,7 +192,7 @@ public class ImageRecognizer{
 			throw new Exception("Squares detection failed");
 		
 		
-		List<ThreePoints> lines = new ArrayList<>();
+		List<ThreePoints> allLines = new ArrayList<>();
 		
 		for(int first = 0; first < contourCenters.size() - 2; ++first){
 			for(int second = first + 1; second < contourCenters.size() - 1; ++second){
@@ -178,45 +203,31 @@ public class ImageRecognizer{
 						contourCenters.get(third)
 					);
 					
-					if(this.getRelativeSize(currentPoints.getFirst(), currentPoints.getLast()) < 0.75){//линия занимает < 75% длины фото
-						continue;
-					}
-					
-					if(this.isSameLine(currentPoints) == false){
-						continue;
-					}
-					
-					if(ImageRecognizer.isCorrectLineProportion(currentPoints) == false){
-						continue;
-					}
-					
-					lines.add(currentPoints);
+					allLines.add(currentPoints);
 				}
 			}
 		}
+
+		this.dumpImageWithLines("7.withAllLines.jpg", allLines);
 		
-		Mat image = this.srcImage.clone();
-		Random rg = new Random();
-		
-		for(ThreePoints line : lines){
-			Scalar color = new Scalar(rg.nextInt(255), rg.nextInt(255), rg.nextInt(255));
-			Imgproc.line(image, line.getFirst(), line.getLast(), color, 2, Core.LINE_4, 0);
+		List<ThreePoints> lines = new ArrayList<>();
+		for(ThreePoints line : allLines){
+			if(this.isSameLine(line) == false){
+				continue;
+			}
 			
-			int radius = (int)this.getErrorValue();
-			Imgproc.circle(image, line.getFirst(), radius, color, 5, Core.FILLED, 0);
-			Imgproc.circle(image, line.getBetween(), radius, color, 5, Core.FILLED, 0);
-			Imgproc.circle(image, line.getLast(), radius, color, 5, Core.FILLED, 0);
+			if(this.getRelativeSize(line.getFirst(), line.getLast()) < 0.75){//линия занимает < 75% длины фото
+				continue;
+			}
 			
-			Point middle12 = ThreePoints.getMiddle(line.getFirst(), line.getBetween());
-			double distance12 = ThreePoints.getDistance(line.getFirst(), line.getBetween());
-			Imgproc.putText(image, String.format("%.2f", distance12), middle12, Core.FONT_HERSHEY_COMPLEX, 2, color);
+			if(ImageRecognizer.isCorrectLineProportion(line) == false){
+				continue;
+			}
 			
-			Point middle23 = ThreePoints.getMiddle(line.getLast(), line.getBetween());
-			double distance23 = ThreePoints.getDistance(line.getLast(), line.getBetween());
-			Imgproc.putText(image, String.format("%.2f", distance23), middle23, Core.FONT_HERSHEY_COMPLEX, 2, color);
+			lines.add(line);
 		}
 		
-		Imgcodecs.imwrite("7.withLines.jpg", image);
+		this.dumpImageWithLines("8.withLines.jpg", lines);
 		
 		List<AngleBetweenLines> angles = new ArrayList<>();
 		for(int first = 0; first < lines.size() - 1; ++first){
@@ -229,7 +240,7 @@ public class ImageRecognizer{
 		if(angles.size() == 0)
 			return false;
 		
-		Collections.sort(angles);
+		Collections.sort(angles, Collections.reverseOrder());
 		
 		AngleBetweenLines winner = angles.get(0);
 		ThreePoints line1 = winner.line1;
@@ -278,11 +289,16 @@ public class ImageRecognizer{
 			ThreePoints.getDistance(bottomLeft, bottomRight)
 		);
 		
+		Point dstTopLeft		= new Point(0, 0);
+		Point dstTopRight		= new Point(imgSize.width, 0);
+		Point dstBottomRight	= new Point(imgSize.width, imgSize.height);
+		Point dstBottomLeft		= new Point(0, imgSize.height);
+		
 		List<Point> dstQuad = new ArrayList<>();
-		dstQuad.add(new Point(0, 0));
-		dstQuad.add(new Point(imgSize.width, 0));
-		dstQuad.add(new Point(imgSize.width, imgSize.height));
-		dstQuad.add(new Point(0, imgSize.height));
+		dstQuad.add(dstTopLeft);
+		dstQuad.add(dstTopRight);
+		dstQuad.add(dstBottomRight);
+		dstQuad.add(dstBottomLeft);
 		
 		Mat srcQuadMat = Converters.vector_Point2f_to_Mat(srcQuad);
 		Mat dstQuadMat = Converters.vector_Point2f_to_Mat(dstQuad);
@@ -292,8 +308,20 @@ public class ImageRecognizer{
 		Mat dst = new Mat();
 		Imgproc.warpPerspective(this.srcImage, dst, lambda, imgSize);
 		
-		return dst;
+		
+		//отрезаем квадратики
+		dstTopLeft.x += this.getAnchorSize();
+		dstTopLeft.y += this.getAnchorSize();
+
+		dstBottomRight.x -= this.getAnchorSize();
+		dstBottomRight.y -= this.getAnchorSize();
+		
+		Rect rect = new Rect(dstTopLeft, dstBottomRight);
+		Mat cropped = new Mat(dst, rect);
+		
+		return cropped;
 	}
+	
 	
 	public Mat getInfoPart() throws Exception{
 		if(this.leftBound == null || this.rightBound == null){
@@ -319,9 +347,9 @@ public class ImageRecognizer{
 			}
 		}
 		Mat codePart = this.getImagePart(
-				this.leftBound.getBetween(), this.rightBound.getBetween(),
-				this.rightBound.getLast(), this.leftBound.getLast()
-			);
+			this.leftBound.getBetween(), this.rightBound.getBetween(),
+			this.rightBound.getLast(), this.leftBound.getLast()
+		);
 			
 		return codePart;
 	}

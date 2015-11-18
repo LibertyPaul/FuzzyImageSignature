@@ -8,6 +8,7 @@ import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
+import pkg1.ImageFuzzyHash;
 import pkg1.ImageRecognizer;
 import ssdeep.ssdeep;
 
@@ -23,27 +24,18 @@ public class Main{
 	public static void main(String[] args){
 		ImageRecognizer ir = null;
 		try{
-			ir = new ImageRecognizer("Photos/testPage4.jpg");
+			ir = new ImageRecognizer("Photos/testPage5.jpg");
 			
 			Mat infoPart = ir.getInfoPart();
-			Imgcodecs.imwrite("8.infoPart.bmp", infoPart);
+			Imgcodecs.imwrite("9.infoPart.bmp", infoPart);
 			Mat codePart = ir.getCodePart();
-			Imgcodecs.imwrite("9.codePart.bmp", codePart);
+			Imgcodecs.imwrite("10.codePart.bmp", codePart);
 			
 
-			Mat bnw = new Mat();
-			Imgproc.cvtColor(infoPart, bnw, Imgproc.COLOR_BGR2GRAY);
+			ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
+			hasher.generateLevels();
 			
-			Mat infoResized = new Mat();
-			Imgproc.resize(bnw, infoResized, new Size(1000, 1000));
-			
-			Mat thresholded = new Mat();
-			Imgproc.threshold(infoResized, thresholded, 110, 255, Imgproc.THRESH_BINARY_INV);
-			
-			Mat dilated = new Mat();
-			Imgproc.dilate(thresholded, dilated, new Mat(), new Point(-1, -1), 10);
-			Imgcodecs.imwrite("10.result.bmp", dilated);
-			
+			/*
 			ssdeep hasher = new ssdeep();
 			String hash = hasher.fuzzy_hash_file("10.result.bmp");
 			System.out.println(hash);
@@ -55,6 +47,7 @@ public class Main{
 			Reader reader = new MultiFormatReader();
 			Result result = reader.decode(bitmap);
 			System.out.println(result.getText());
+			*/
 			
 		}
 		catch(Exception e){
