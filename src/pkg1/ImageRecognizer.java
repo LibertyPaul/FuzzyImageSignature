@@ -105,7 +105,7 @@ public class ImageRecognizer{
 		//находим длинну высоты, брошенной от точки к прямой
 		double D = Math.abs(A * p2.x + B*p2.y + C) / Math.sqrt(A * A + B * B);
 		
-		return D < this.getAnchorSize();
+		return D < this.getAnchorSize() / 2;
 	}
 	
 	protected boolean isSameLine(ThreePoints threePoints){

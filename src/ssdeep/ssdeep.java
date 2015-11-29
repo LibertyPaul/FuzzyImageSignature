@@ -1,10 +1,10 @@
 package ssdeep;
 /*
  * SPDXVersion: SPDX-1.1
- * Creator: Person: Nuno Brito (nuno.brito@triplecheck.de)
- * Creator: Organization: TripleCheck (contact@triplecheck.de)
- * Created: 2014-05-14T19:16:46Z
+ * Creator: Person: Pavel Yazev
+ * Created: 2015-11-29
  * LicenseName: GPL-2.0+
+ * FileCopyrightText: <text> Copyright (c) 2015, Pavel Yazev </text>
  * FileCopyrightText: <text> Copyright (c) 2014, Nuno Brito </text>
  * FileCopyrightText: <text> Copyright Jesse Kornblum </text>
  * FileComment: <text> 
@@ -28,11 +28,11 @@ public class ssdeep {
     public final int HASH_PRIME = 0x01000193;
     public final int HASH_INIT = 0x28021967;
     public final String b64String = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    private static byte[] b64;
+    protected static byte[] b64;
 
     private RollingState roll_state;
 
-    private class ss_context
+    class ss_context
     {
         //public byte ret, p;
         //public byte[] ret, p;
@@ -136,7 +136,7 @@ public class ssdeep {
      * </p>
      * @return Hash value
      */
-    private long roll_reset()
+    protected long roll_reset()
     {
         roll_state = new RollingState();
         return 0;
@@ -172,7 +172,7 @@ public class ssdeep {
      @param stream The stream.
      @return
     */
-    private void ss_init(ss_context ctx, File handle)
+    protected void ss_init(ss_context ctx, long srcLength)
     {
         if (null == ctx)
         {
@@ -180,10 +180,7 @@ public class ssdeep {
         }
         // ctx.ret = new byte[FUZZY_MAX_RESULT];
 
-        if (handle != null)
-        {
-            ctx.total_chars = handle.length();
-        }
+        ctx.total_chars = srcLength;
 
         ctx.block_size = MIN_BLOCKSIZE;
 
@@ -209,7 +206,7 @@ public class ssdeep {
         return FALSE;
     }
     */
-    private void ss_engine(ss_context ctx, byte[] buffer, int buffer_size)
+    protected void ss_engine(ss_context ctx, byte[] buffer, int buffer_size)
     {
         int i;
 
@@ -335,7 +332,7 @@ public class ssdeep {
         return 0;
     }
 
-    private byte[] GetArray(byte[] input, int maxLength)
+    protected byte[] GetArray(byte[] input, int maxLength)
     {
         if (input.length == maxLength)
         {
@@ -389,7 +386,7 @@ public class ssdeep {
 
         long filepos = stream.getFilePointer();
 
-        ss_init(ctx, file);
+        ss_init(ctx, file.length());
 
         while (!done)
         {
@@ -603,7 +600,7 @@ public class ssdeep {
         {
             return 0;
         }
-
+		
         /* compute the edit distance between the two strings. The edit distance gives
            us a pretty good idea of how closely related the two strings are */
         score = edit_distn(s1, len1, s2, len2);

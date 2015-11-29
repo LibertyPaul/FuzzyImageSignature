@@ -2,3 +2,7 @@
 /*.bmp
 /*.jpg
 /levels/*
+/Photos/*
+/bin/*
+.classpath
+.project
