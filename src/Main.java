@@ -43,6 +43,7 @@ public class Main{
 		try{
 			List<String> hashes = new ArrayList<>();
 			
+			int i = 0;
 			for(String filePath : testImages){
 				ImageRecognizer ir = new ImageRecognizer(filePath);
 				
@@ -53,9 +54,13 @@ public class Main{
 				
 	
 				ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
-				String hash = hasher.getImageFuzzyHash();
-				hashes.add(hash);
-				System.out.println(hash);
+				hasher.test();
+				//String hash = hasher.getImageFuzzyHash();
+				//hashes.add(hash);
+				//System.out.println(hash);
+				
+				Mat rected = hasher.getRectedImage();
+				Imgcodecs.imwrite("11." + (i++) + ".rect.png", rected);
 				
 				/*				
 				BufferedImage img = ImageIO.read(new File("9.codePart.bmp"));
@@ -66,7 +71,7 @@ public class Main{
 				System.out.println(result.getText());
 				*/
 			}
-			
+			/*
 			ssdeep hasher = new ssdeep();
 			for(int first = 0; first < hashes.size() - 1; ++first){
 				for(int second = first + 1; second < hashes.size(); ++second){
@@ -77,7 +82,7 @@ public class Main{
 					System.out.println(Integer.toString(first) + " - " + Integer.toString(second) + " -> " + Integer.toString(score));
 				}
 			}
-			
+			*/
 		}
 		catch(Exception e){
 			// TODO Auto-generated catch block

@@ -517,7 +517,7 @@ public class ssdeep {
                 return 2;
             }
 
-            result &= (array1[a + idx1] == array2[a + idx2]);
+            result &= (array1[a + idx1] == array2[a + idx2]);//TODO: &= это, скорее всего, не логическая а побитовая операция. Какого хуя она тут?
 
             if (!result)
             {

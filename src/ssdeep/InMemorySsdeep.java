@@ -6,7 +6,7 @@ import java.io.InputStream;
 
 public class InMemorySsdeep extends ssdeep{
 	
-	protected int ss_update(ss_context ctx, InputStream stream) throws IOException{
+	protected int ss_update(ss_context ctx, InputStream stream){
         int bytes_read;
         byte[] buffer;
 
@@ -24,10 +24,15 @@ public class InMemorySsdeep extends ssdeep{
         ctx.h3 = ctx.h2 = HASH_INIT;
         ctx.h = roll_reset();
 
-        while ((bytes_read = stream.read(buffer, 0, buffer.length)) > 0)
-        {
-            ss_engine(ctx, buffer, bytes_read);
-        }
+        try{
+			while((bytes_read = stream.read(buffer, 0, buffer.length)) > 0){
+			    ss_engine(ctx, buffer, bytes_read);
+			}
+		}
+		catch(IOException e){
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
         if (ctx.h != 0)
         {
@@ -42,7 +47,7 @@ public class InMemorySsdeep extends ssdeep{
         return 0;
     }
 	
-	public String fuzzy_hash_array(byte[] src) throws IOException{
+	public String fuzzy_hash_array(byte[] src){
         if (src == null){
             throw new IllegalArgumentException("stream");
         }

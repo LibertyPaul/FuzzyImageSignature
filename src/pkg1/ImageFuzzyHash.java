@@ -3,6 +3,8 @@ package pkg1;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
@@ -10,18 +12,22 @@ import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.utils.Converters;
 
 public class ImageFuzzyHash{
+	protected Mat srcImage;
 	protected Mat infoPart;
 	protected String fuzzyHash;
 	
 	public ImageFuzzyHash(Mat srcImage) throws Exception{
 		if(srcImage == null)
 			throw new Exception("srcIamge should not be null");
+		
+		this.srcImage = srcImage.clone();
 		
 		Mat bnw = new Mat();
 		Imgproc.cvtColor(srcImage, bnw, Imgproc.COLOR_BGR2GRAY);
@@ -38,8 +44,8 @@ public class ImageFuzzyHash{
 	protected boolean isCharacter(Rect rect){
 		//функция проверяет размеры фигуры на соответствие примерному размеру символа
 		//предположим, что на странице может поместиться 50 символов по вертикали и по горизонтали вплотную
-		int verticalCount	= 66;
-		int gorizontalCount = 66;
+		int verticalCount	= 50;
+		int gorizontalCount = 50;
 		int approxHeight	= this.infoPart.rows() / verticalCount;
 		int aproxWidth		= this.infoPart.cols() / gorizontalCount;
 		
@@ -51,12 +57,9 @@ public class ImageFuzzyHash{
 		return heightError < acceptableError && widthError < acceptableError;
 	}
 	
-	protected List<Rect> getPerCharacterRectangles(){
-		Mat dilated = new Mat();
-		Imgproc.dilate(this.infoPart, dilated, new Mat());
-		
+	protected List<Rect> getPerCharacterRectangles(){		
 		List<MatOfPoint> contours = new ArrayList<>();
-		Imgproc.findContours(dilated, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
+		Imgproc.findContours(this.infoPart, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
 		
 		int contourCount = contours.size();
 		
@@ -106,19 +109,38 @@ public class ImageFuzzyHash{
 		Mat result = new Mat();
 		Imgproc.warpPerspective(this.infoPart, result, lambda, charField.size());
 		
+		Mat dilated = new Mat();
+		Imgproc.dilate(result, dilated, new Mat());
+		
+		result = dilated;
+		
 		return result;
 	}
 	
-	protected String calcImageHash() throws IOException{		
-		List<Rect> characterRectangles = this.getPerCharacterRectangles();
+	protected DataHash getDataHash(Rect rect){
+		Mat currentChar = this.charToMat(rect);
+		MatOfByte buffer = new MatOfByte();
+		Imgcodecs.imencode(".bmp", currentChar, buffer);
 		
-		ComplexSsdeep hasher = new ComplexSsdeep();
+		DataHash result = new DataHash(buffer.toArray());
+		return result;
+	}
+	
+	protected List<DataHash> getCharacterHashes(){
+		List<Rect> characterRectangles = this.getPerCharacterRectangles();
+		List<DataHash> dataHashes = new ArrayList<>(characterRectangles.size());
+		
 		for(Rect rect : characterRectangles){
-			Mat currentChar = this.charToMat(rect);
-			MatOfByte buffer = new MatOfByte();
-			Imgcodecs.imencode(".bmp", currentChar, buffer);
-			hasher.add(buffer.toArray());
+			DataHash current = this.getDataHash(rect);
+			dataHashes.add(current);
 		}
+		
+		return dataHashes;
+	}
+	
+	protected String calcImageHash() throws IOException{		
+		ComplexSsdeep hasher = new ComplexSsdeep();
+		hasher.addAll(this.getCharacterHashes());
 		
 		return hasher.getComplexHash();
 	}
@@ -130,4 +152,20 @@ public class ImageFuzzyHash{
 		return this.fuzzyHash;
 	}
 	
+	
+	public Mat getRectedImage(){
+		List<Rect> characterRectangles = this.getPerCharacterRectangles();
+		Mat imgCopy = this.infoPart.clone();
+		for(Rect rect : characterRectangles){
+			Imgproc.rectangle(imgCopy, rect.tl(), rect.br(), new Scalar(255, 255, 255));
+		}
+		System.out.println(characterRectangles.size());
+		return imgCopy;
+	}
+	
+	public void test(){
+		ComplexSsdeep hasher = new ComplexSsdeep();
+		hasher.addAll(this.getCharacterHashes());
+		hasher.test();
+	}
 }
