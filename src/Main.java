@@ -8,10 +8,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 
+import pkg1.CharacterMatrix;
 import pkg1.ImageFuzzyHash;
 import pkg1.ImageRecognizer;
 import ssdeep.InMemorySsdeep;
@@ -28,61 +28,34 @@ public class Main{
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 	}
 	
-	protected static List<String> testImages = Arrays.asList(
-			"Photos/testPage1.jpg",
-			"Photos/testPage2.jpg", 
-			"Photos/testPage3.jpg", 
-			"Photos/testPage4.jpg", 
-			"Photos/testPage5.jpg"
-	);
 	
-	public static void main(String[] args){
+	
+	
+	
+	public static void mainTest(){
+		List<String> testImages = Arrays.asList(
+				"Photos/testPage1.jpg",
+				"Photos/testPage2.jpg", 
+				"Photos/testPage3.jpg", 
+				"Photos/testPage4.jpg", 
+				"Photos/testPage5.jpg", 
+				"Photos/testPage6.jpg", 
+				"Photos/testPage7.jpg", 
+				"Photos/testPage8.jpg"
+		);
 		//testInMemorySsdeep();
-		
-		
 		try{
-			List<String> hashes = new ArrayList<>();
+			ImageRecognizer ir = new ImageRecognizer("Photos/testPage8.jpg");
 			
-			int i = 0;
-			for(String filePath : testImages){
-				ImageRecognizer ir = new ImageRecognizer(filePath);
-				
-				Mat infoPart = ir.getInfoPart();
-				Imgcodecs.imwrite("9.infoPart.bmp", infoPart);
-				Mat codePart = ir.getCodePart();
-				Imgcodecs.imwrite("10.codePart.bmp", codePart);
-				
-	
-				ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
-				hasher.test();
-				//String hash = hasher.getImageFuzzyHash();
-				//hashes.add(hash);
-				//System.out.println(hash);
-				
-				Mat rected = hasher.getRectedImage();
-				Imgcodecs.imwrite("11." + (i++) + ".rect.png", rected);
-				
-				/*				
-				BufferedImage img = ImageIO.read(new File("9.codePart.bmp"));
-				LuminanceSource source = new BufferedImageLuminanceSource(img);
-				BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
-				Reader reader = new MultiFormatReader();
-				Result result = reader.decode(bitmap);
-				System.out.println(result.getText());
-				*/
-			}
-			/*
-			ssdeep hasher = new ssdeep();
-			for(int first = 0; first < hashes.size() - 1; ++first){
-				for(int second = first + 1; second < hashes.size(); ++second){
-					SpamSumSignature firstSignature = new SpamSumSignature(hashes.get(first));
-					SpamSumSignature secondSignature = new SpamSumSignature(hashes.get(second));
-					
-					int score = hasher.Compare(firstSignature, secondSignature);
-					System.out.println(Integer.toString(first) + " - " + Integer.toString(second) + " -> " + Integer.toString(score));
-				}
-			}
-			*/
+			Mat infoPart = ir.getInfoPart();
+			Imgcodecs.imwrite("9.infoPart.bmp", infoPart);
+			Mat codePart = ir.getCodePart();
+			Imgcodecs.imwrite("10.codePart.bmp", codePart);
+			
+
+			ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
+			String hash = hasher.getImageFuzzyHash();
+			System.out.println(hash);
 		}
 		catch(Exception e){
 			// TODO Auto-generated catch block
@@ -91,8 +64,16 @@ public class Main{
 		
 		
 		System.out.println("done.");
+	}
+	
+	public static void testCharacterMatrix(){
+		Mat m1 = Imgcodecs.imread("allChars/384.bmp");
+		CharacterMatrix cm1 = new CharacterMatrix(m1);
+
+		Mat m2 = Imgcodecs.imread("allChars/385.bmp");
+		CharacterMatrix cm2 = new CharacterMatrix(m2);
 		
-		
+		System.out.println(cm1.compare(cm2));
 	}
 	
 	public static void testInMemorySsdeep(){
@@ -129,6 +110,17 @@ public class Main{
 			System.out.println("Hash from file:    " + hashFromFile);
 			System.out.println("Hash from memory:  " + hashFromMemory);
 		}
+	}
+	
+	public static void main(String[] args){
+		long startTime = System.currentTimeMillis();
+		
+		//Main.testCharacterMatrix();
+		Main.mainTest();
+		
+		long stopTime = System.currentTimeMillis();
+		double timeMiliSec = stopTime - startTime;
+		System.out.println("Time elapsed: " + timeMiliSec / 1000);
 	}
 
 }

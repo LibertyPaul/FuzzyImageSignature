@@ -4,5 +4,7 @@
 /levels/*
 /Photos/*
 /bin/*
+/chars/
+/allChars/
 .classpath
 .project

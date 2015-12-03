@@ -92,8 +92,12 @@ public class ImageRecognizer{
 	}
 	
 	//эта функция считает сколько примерно должна занимать 1 метка в зависимости от разрешения фото
+	protected static double getAnchorSize(double imageWidhth, double imageHeight){
+		return Math.min(imageWidhth, imageHeight) * 0.025;
+	}
+	
 	protected double getAnchorSize(){
-		return Math.min(this.srcImage.width(), this.srcImage.height()) * 0.025;
+		return ImageRecognizer.getAnchorSize(this.srcImage.width(), this.srcImage.height());
 	}
 	
 	protected boolean isSameLine(Point p1, Point p2, Point p3){
@@ -250,7 +254,7 @@ public class ImageRecognizer{
 		if(Math.abs(relativeAngle) > Math.PI / 8)
 			throw new Exception("Lines are not parallel");
 		
-		
+
 		double angle = line1.getAngle();
 		int degrees = ((int)Math.toDegrees(angle) + 360) % 360;
 		int direction = (degrees - 45) / 90;//0 - up, 1 - left, 2 - down, 3 - right
@@ -272,7 +276,7 @@ public class ImageRecognizer{
 		return true;
 	}
 	
-	protected Mat getImagePart(Point topLeft, Point topRight, Point bottomRight, Point bottomLeft){
+	protected static Mat getImagePart(Mat srcImage, Point topLeft, Point topRight, Point bottomRight, Point bottomLeft){
 		List<Point> srcQuad = new ArrayList<>();
 		srcQuad.add(topLeft);
 		srcQuad.add(topRight);
@@ -306,20 +310,63 @@ public class ImageRecognizer{
 		Mat lambda = Imgproc.getPerspectiveTransform(srcQuadMat, dstQuadMat);
 		
 		Mat dst = new Mat();
-		Imgproc.warpPerspective(this.srcImage, dst, lambda, imgSize);
-		
-		
-		//отрезаем квадратики
-		dstTopLeft.x += this.getAnchorSize();
-		dstTopLeft.y += this.getAnchorSize();
-
-		dstBottomRight.x -= this.getAnchorSize();
-		dstBottomRight.y -= this.getAnchorSize();
+		Imgproc.warpPerspective(srcImage, dst, lambda, imgSize);
 		
 		Rect rect = new Rect(dstTopLeft, dstBottomRight);
 		Mat cropped = new Mat(dst, rect);
 		
 		return cropped;
+	}
+	
+	protected static Mat trim(Mat image) throws Exception{
+		//удаляет белые поля вокруг текста
+		Mat bnw = new Mat();
+		Imgproc.cvtColor(image, bnw, Imgproc.COLOR_BGR2GRAY);
+		
+		Mat dilated = new Mat();
+		Imgproc.dilate(bnw, dilated, new Mat(), new Point(-1, -1), 30);
+
+		List<MatOfPoint> contours = new ArrayList<>();
+		Imgproc.findContours(dilated, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
+		
+		int contourCount = contours.size();
+		List<Rect> rectangles = new ArrayList<>();//координаты прямоугольных областей описаных вокруг контуров
+		for(int i = 0; i < contourCount; ++i){
+			MatOfPoint currentContour = contours.get(i);
+			MatOfPoint2f current2f = new MatOfPoint2f(currentContour.toArray());
+			MatOfPoint2f approxCurve2f = new MatOfPoint2f();
+			Imgproc.approxPolyDP(current2f, approxCurve2f, Imgproc.arcLength(current2f, true) * 0.02, true);
+			
+			Rect rect = Imgproc.boundingRect(new MatOfPoint(approxCurve2f.toArray()));
+			rectangles.add(rect);
+		}
+		if(rectangles.size() < 1){
+			throw new Exception("No contours found");
+		}
+		
+		int maxRectPos = 0;
+		for(int i = 1; i < rectangles.size(); ++i){
+			if(rectangles.get(maxRectPos).area() < rectangles.get(i).area()){
+				maxRectPos = i;
+			}
+		}
+		
+		Mat cropped = new Mat(image, rectangles.get(maxRectPos));
+		return cropped;
+	}
+	
+	protected static Mat cutSides(Mat image, int width){
+		//удаляет по несколько десятков пикселей с 4х сторон
+		Rect rect = new Rect();
+		rect.x = width;
+		rect.y = width;
+		
+		rect.width = image.cols() - width * 2;
+		rect.height = image.rows() - width * 2;
+		
+		
+		Mat withoutAnchors = new Mat(image, rect);
+		return withoutAnchors;
 	}
 	
 	
@@ -329,14 +376,19 @@ public class ImageRecognizer{
 			if(res == false){
 				throw new Exception("Recognition failed");
 			}
-		}
-		
-		Mat infoPart = this.getImagePart(
+		}		
+		Mat withAnchors = ImageRecognizer.getImagePart(this.srcImage,
 			this.leftBound.getFirst(), this.rightBound.getFirst(),
 			this.rightBound.getBetween(), this.leftBound.getBetween()
 		);
+		Imgcodecs.imwrite("12.withAnchors.png", withAnchors);
 		
-		return infoPart;
+		int anchorSize = (int) ImageRecognizer.getAnchorSize(withAnchors.cols(), withAnchors.rows());
+		Mat withoutAnchors = ImageRecognizer.cutSides(withAnchors, anchorSize);
+		Imgcodecs.imwrite("13.withoutAnchors.png", withoutAnchors);
+		
+		Mat trimmed = ImageRecognizer.trim(withoutAnchors);
+		return trimmed;
 	}
 	
 	public Mat getCodePart() throws Exception{
@@ -346,12 +398,14 @@ public class ImageRecognizer{
 				throw new Exception("Recognition failed");
 			}
 		}
-		Mat codePart = this.getImagePart(
+		Mat withAnchors = ImageRecognizer.getImagePart(this.srcImage,
 			this.leftBound.getBetween(), this.rightBound.getBetween(),
 			this.rightBound.getLast(), this.leftBound.getLast()
 		);
-			
-		return codePart;
+		int anchorSize = (int) ImageRecognizer.getAnchorSize(withAnchors.cols(), withAnchors.rows());
+		Mat withoutAnchors = ImageRecognizer.cutSides(withAnchors, anchorSize);
+		Mat trimmed = ImageRecognizer.trim(withoutAnchors);
+		return trimmed;
 	}
 }
 
