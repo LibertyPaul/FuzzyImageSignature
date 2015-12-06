@@ -11,11 +11,8 @@ import java.util.List;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 
-import pkg1.CharacterMatrix;
-import pkg1.ImageFuzzyHash;
-import pkg1.ImageRecognizer;
+import pkg1.*;
 import ssdeep.InMemorySsdeep;
-import ssdeep.SpamSumSignature;
 import ssdeep.ssdeep;
 
 /*
@@ -28,52 +25,53 @@ public class Main{
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 	}
 	
-	
-	
-	
-	
-	public static void mainTest(){
+	public static void mainTest() throws Exception{
 		List<String> testImages = Arrays.asList(
-				"Photos/testPage1.jpg",
-				"Photos/testPage2.jpg", 
-				"Photos/testPage3.jpg", 
-				"Photos/testPage4.jpg", 
-				"Photos/testPage5.jpg", 
-				"Photos/testPage6.jpg", 
-				"Photos/testPage7.jpg", 
-				"Photos/testPage8.jpg"
+				//"testPhotos/1.jpg",
+				//"testPhotos/2.jpg",
+				"testPhotos/3.jpg",
+				"testPhotos/4.jpg",
+				"testPhotos/5.jpg",
+				"testPhotos/6.jpg"
 		);
-		//testInMemorySsdeep();
-		try{
-			ImageRecognizer ir = new ImageRecognizer("Photos/testPage8.jpg");
+		
+		List<ImageFyzzyHashSum> hashes = new ArrayList<>();
+		
+		for(String fName : testImages){
+			ImageRecognizer ir = new ImageRecognizer(fName);
 			
-			Mat infoPart = ir.getInfoPart();
-			Imgcodecs.imwrite("9.infoPart.bmp", infoPart);
-			Mat codePart = ir.getCodePart();
-			Imgcodecs.imwrite("10.codePart.bmp", codePart);
+			Mat infoPart = null;
+			Mat codePart = null;
+			try{
+				infoPart = ir.getInfoPart();
+				Imgcodecs.imwrite("9.infoPart.bmp", infoPart);
+				codePart = ir.getCodePart();
+				Imgcodecs.imwrite("10.codePart.bmp", codePart);
+			}
+			catch(Exception ex){
+				System.err.println(ex.getMessage());
+				continue;
+			}
 			
-
 			ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
-			String hash = hasher.getImageFuzzyHash();
-			System.out.println(hash);
+			hasher.test();
+			break;
+			/*
+			ImageFyzzyHashSum hash = hasher.getImageFuzzyHash();
+			hashes.add(hash);
+			System.out.println(hash.toString());
+			*/
 		}
-		catch(Exception e){
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		
+		for(int first = 0; first < hashes.size() - 1; ++first){
+			for(int second = first + 1; second < hashes.size(); ++second){
+				System.out.println(first + " <--> " + second + " : " + hashes.get(first).calcDifference(hashes.get(second)));
+			}
 		}
+		
 		
 		
 		System.out.println("done.");
-	}
-	
-	public static void testCharacterMatrix(){
-		Mat m1 = Imgcodecs.imread("allChars/384.bmp");
-		CharacterMatrix cm1 = new CharacterMatrix(m1);
-
-		Mat m2 = Imgcodecs.imread("allChars/385.bmp");
-		CharacterMatrix cm2 = new CharacterMatrix(m2);
-		
-		System.out.println(cm1.compare(cm2));
 	}
 	
 	public static void testInMemorySsdeep(){
@@ -115,8 +113,13 @@ public class Main{
 	public static void main(String[] args){
 		long startTime = System.currentTimeMillis();
 		
-		//Main.testCharacterMatrix();
-		Main.mainTest();
+		try{
+			Main.mainTest();
+		}
+		catch(Exception e){
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		long stopTime = System.currentTimeMillis();
 		double timeMiliSec = stopTime - startTime;

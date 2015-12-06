@@ -13,8 +13,8 @@ public class CharactersStatistics{
 		this.characterGroups = new ArrayList<>();
 	}
 	
-	protected long getCount(){
-		long result = 0;
+	protected int getCount(){
+		int result = 0;
 		for(SimilarCharacterGroup characterFrequency : this.characterGroups){
 			result += characterFrequency.getCount();
 		}
@@ -22,7 +22,7 @@ public class CharactersStatistics{
 	}
 	
 	public void add(CharacterMatrix characterMatrix){
-		final double similarityBound = 0.125;
+		final double similarityBound = 0.13;
 	
 		int maxSimilarityPos = 0;
 		double minDifference = similarityBound + 42;//заведомо несовпадающее значение
@@ -52,20 +52,34 @@ public class CharactersStatistics{
 	
 	@Override
 	public String toString(){
-		String result = "";
 		long count = this.getCount();
 		List<SimilarCharacterGroup> sorted = new ArrayList<>(this.characterGroups);
-		Collections.sort(sorted);
+		Collections.sort(sorted, Collections.reverseOrder());
+
+		String result = "" + count + " " + sorted.size() + " ";
 		for(SimilarCharacterGroup characterGroup : sorted){
-			result += ((double)characterGroup.getCount() / count) + " ";
+			result += characterGroup.getCount() + " ";
 		}
-		result += "\nCount: " + count + "\nSize: " + sorted.size();
+		
 		return result;
 	}
 	
 	public void dump(File path) throws IOException{
 		for(int i = 0; i < this.characterGroups.size(); ++i){
-			this.characterGroups.get(i).dumpCharacters(new File(path.getAbsolutePath() + "/" + i + "/"));
+			this.characterGroups.get(i).dumpCharacters(new File(path.getAbsolutePath() + "/" + i + "."));
 		}
 	}
+	
+	protected List<Integer> getFrequencies(){
+		List<Integer> res = new ArrayList<>(this.characterGroups.size());
+		final int count = this.getCount();
+		for(final SimilarCharacterGroup characterGroup : this.characterGroups){
+			res.add(characterGroup.getCount());
+		}
+		return res;
+	}
 }
+
+
+
+

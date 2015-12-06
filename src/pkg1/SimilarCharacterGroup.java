@@ -3,6 +3,7 @@ package pkg1;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -31,15 +32,24 @@ public class SimilarCharacterGroup implements Comparable<SimilarCharacterGroup>{
 		return characterList.get(index);
 	}
 	
+	private double getMedian(List<Double> src){
+		assert src.size() > 0;
+		List<Double> copy = new ArrayList<>(src);
+		Collections.sort(copy);
+		return copy.get(copy.size() / 2);
+	}
+	
 	public double fullComparsion(CharacterMatrix characterMatrix){
-		double min = Double.POSITIVE_INFINITY;
+		//double sum = 0;
+		List<Double> values = new ArrayList<>();
+		
 		for(CharacterMatrix cm : this.characterList){
 			double current = cm.compare(characterMatrix);
-			if(min >= current){
-				min = current;
-			}
+			//sum += current;
+			values.add(current);
 		}
-		return min;
+		//return sum / this.characterList.size();
+		return this.getMedian(values);
 	}
 	
 	public double randomComparsion(CharacterMatrix characterMatrix){
@@ -52,15 +62,15 @@ public class SimilarCharacterGroup implements Comparable<SimilarCharacterGroup>{
 		if(this.characterList.size() <= count){
 			return this.fullComparsion(characterMatrix);
 		}
-		
-		double min = Double.POSITIVE_INFINITY;
+		//double sum = 0;
+		List<Double> values = new ArrayList<>();
 		for(int i = 0; i < count; ++i){
 			double current = this.randomComparsion(characterMatrix);
-			if(min >= current){
-				min = current;
-			}
+			//sum += current;
+			values.add(current);
 		}
-		return min;
+		//return sum / this.characterList.size();
+		return this.getMedian(values);
 	}
 	
 	public void addCharacter(CharacterMatrix characterMatrix){
@@ -78,7 +88,7 @@ public class SimilarCharacterGroup implements Comparable<SimilarCharacterGroup>{
 	
 	public void dumpCharacters(File path) throws IOException{
 		for(int i = 0; i < this.characterList.size(); ++i){
-			this.characterList.get(i).dump(new File(path.getAbsolutePath() + "/" + i + ".bmp"));
+			this.characterList.get(i).dump(new File(path.getAbsolutePath() + "." + i + ".bmp"));
 		}
 		
 	}

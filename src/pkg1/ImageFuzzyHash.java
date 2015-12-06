@@ -1,7 +1,10 @@
 package pkg1;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,12 +18,10 @@ import org.opencv.imgproc.Imgproc;
 
 public class ImageFuzzyHash{
 	protected Mat srcImage;
-	protected String fuzzyHash;
+	protected ImageFyzzyHashSum fuzzyHash;
 
-	public ImageFuzzyHash(Mat srcImage) throws Exception{
-		if(srcImage == null)
-			throw new Exception("srcIamge should not be null");
-		
+	public ImageFuzzyHash(Mat srcImage){
+		assert srcImage != null;
 		this.srcImage = srcImage.clone();
 	}
 	
@@ -67,7 +68,7 @@ public class ImageFuzzyHash{
 			Rect rect = Imgproc.boundingRect(new MatOfPoint(approxCurve2f.toArray()));
 			if(this.isCharacter(rect)){
 				rectangles.add(rect);
-				Imgproc.rectangle(testImage, rect.tl(), rect.br(), new Scalar(255, 255, 255));
+				Imgproc.rectangle(testImage, rect.tl(), rect.br(), new Scalar(128, 128, 0));
 			}
 		}
 		
@@ -96,16 +97,14 @@ public class ImageFuzzyHash{
 		return charStat;
 	}
 	
-	protected String calcImageHash() throws IOException{
+	protected ImageFyzzyHashSum calcImageHash() throws IOException{
 		CharactersStatistics charStats = this.getFrequency();
-
-		charStats.dump(new File("chars/"));
-		System.out.println(charStats);
-		
-		return "";
+		List<Integer> frequences = charStats.getFrequencies();
+		//charStats.dump(new File("chars/"));
+		return new ImageFyzzyHashSum(frequences);
 	}
 	
-	public String getImageFuzzyHash() throws IOException{
+	public ImageFyzzyHashSum getImageFuzzyHash() throws IOException{
 		if(this.fuzzyHash == null)
 			this.fuzzyHash = this.calcImageHash();
 		
@@ -124,5 +123,32 @@ public class ImageFuzzyHash{
 	}
 	
 	public void test(){
+		List<Rect> characterRectangles = this.getPerCharacterRectangles();
+		List<CharacterMatrix> characters = new ArrayList<>();
+		
+		for(Rect rect : characterRectangles){
+			CharacterMatrix currentChar = new CharacterMatrix(new Mat(this.srcImage, rect));
+			characters.add(currentChar);
+		}
+		
+		PrintWriter writer = null;
+		try{
+			writer = new PrintWriter("differences.txt", "UTF-8");
+		}
+		catch(FileNotFoundException e){
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch(UnsupportedEncodingException e){
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		for(int first = 0; first < characters.size() - 1; ++first){
+			for(int second = first + 1; second < characters.size(); ++second){
+				double similarity = characters.get(first).compare(characters.get(second));
+				writer.println(similarity);
+			}
+		}
+		writer.close();
 	}
 }

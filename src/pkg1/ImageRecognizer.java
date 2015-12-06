@@ -16,10 +16,9 @@ public class ImageRecognizer{
 	protected ThreePoints leftBound  = null;
 	protected ThreePoints rightBound = null;
 	
-	public ImageRecognizer(String path) throws Exception{
+	public ImageRecognizer(String path){
 		srcImage = Imgcodecs.imread(path);
-		if(srcImage.empty())
-			throw new Exception("Image reading error");
+		assert srcImage.empty() == false;
 	}
 	
 	private Mat getPreparedImage(){
@@ -28,7 +27,7 @@ public class ImageRecognizer{
 		Imgcodecs.imwrite("1.bnw.png", bnw);
 		
 		Mat blurred = new Mat();
-		Imgproc.GaussianBlur(bnw, blurred, new Size(5, 5), 5.0);
+		Imgproc.GaussianBlur(bnw, blurred, new Size(5, 5), 10.0);
 		Imgcodecs.imwrite("2.blurred.png", blurred);
 		
 		Mat edges = new Mat();
@@ -57,15 +56,17 @@ public class ImageRecognizer{
 	
 	protected List<MatOfPoint> getFilteredCountors(){
 		Mat image = this.getPreparedImage();
-		Mat src = this.srcImage.clone();
 		
 		List<MatOfPoint> contours = new ArrayList<>();
-		Imgproc.findContours(image, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
-		if(contours.size() < 6)//похоже, что найден внешний контур, а не квадратики
-			Imgproc.findContours(image, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_NONE);
+		Imgproc.findContours(image, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+		if(contours.size() < 6){//похоже, что найден внешний контур, а не квадратики
+			System.out.println("contours.size() < 6");
+			Imgproc.findContours(image, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+		}
 		
 		List<MatOfPoint> acceptedCountors = new ArrayList<>();
-		
+
+		Mat src = this.srcImage.clone();
 		for(int i = 0; i < contours.size(); ++i){
 			MatOfPoint current = contours.get(i);
 			MatOfPoint2f current2f = new MatOfPoint2f(current.toArray());
@@ -78,7 +79,7 @@ public class ImageRecognizer{
 			dummy.add(new MatOfPoint(approxCurve2f.toArray()));
 			
 			if(
-				approxCurve2f.size().area() == 4.0 	&&
+		//		approxCurve2f.size().area() == 4.0 	&&
 				Math.abs(contourArea)		 > 1000	&&
 				Imgproc.isContourConvex(new MatOfPoint(approxCurve2f.toArray()))
 			){
@@ -176,7 +177,7 @@ public class ImageRecognizer{
 	}
 	
 	//getPageCoords ищет на изображении метки, по которым определяет границы
-	public boolean recognize() throws Exception{
+	protected boolean recognize() throws Exception{
 		List<MatOfPoint> countors = this.getFilteredCountors();
 		
 		List<Point> contourCenters = new ArrayList<>();
@@ -314,6 +315,8 @@ public class ImageRecognizer{
 		
 		Rect rect = new Rect(dstTopLeft, dstBottomRight);
 		Mat cropped = new Mat(dst, rect);
+		
+		
 		
 		return cropped;
 	}

@@ -3,6 +3,7 @@ package pkg1;
 import java.io.File;
 import java.io.IOException;
 
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.core.Size;
@@ -15,55 +16,44 @@ public class CharacterMatrix{
 		this.character = character.clone();
 	}
 	
-	protected Mat getImagePart(Rect rect) throws Exception{
-		if(
-				rect.width	> this.character.cols() ||
-				rect.height	> this.character.rows()
-		){
-			throw new Exception("Out of matrix");
-		}
+	protected Mat getImagePart(Rect rect){
+		Mat result = new Mat();
 		
-		Mat result = new Mat(this.character, rect);
-		return result;
-	}
-	
-	protected static double euclidianDistance(double[] v1, double[] v2){
-		assert v1.length == v2.length;
+		int top		= (int)rect.tl().y;
+		int bottom	= this.character.rows() - (int)rect.br().y;
+		int left	= (int)rect.tl().x;
+		int right	= this.character.cols() - (int)rect.br().x;
 		
-		double result = 0;
-		for(int i = 0; i < v1.length; ++i){
-			double sub = v1[i] - v2[i];
-			double squareSub = Math.pow(sub, 2);
-			result += squareSub;
-		}
-		result = Math.pow(result, 0.5);
+		Core.copyMakeBorder(
+			this.character,
+			result,
+			-top,
+			-bottom,
+			-left,
+			-right,
+			Core.BORDER_DEFAULT
+		);
+		
 		return result;
 	}
 	
 	protected static double calcDistance(Mat image1, Mat image2){
-		assert image1.size().equals(image2.size());
 		assert image1.type() == image2.type();
+		assert image1.size().equals(image2.size());
 		
 		double distanceSum = 0;
-		
-		double minValue = 0;
-		double maxValue = 255;
-		double rangeSize = maxValue - minValue;
-		
 		Size size = image1.size();
 		for(int row = 0; row < size.height; ++row){
 			for(int col = 0; col < size.width; ++col){
-				double[] point1 = image1.get(row, col);
-				double[] point2 = image2.get(row, col);
-				assert point1.length == point2.length;
-				
-				double distanceMaxPossibleValue = rangeSize * Math.pow(point1.length, 0.5);
-				double distance = CharacterMatrix.euclidianDistance(point1, point2);
-				distanceSum += distance / distanceMaxPossibleValue;
+				double[] vec1 = image1.get(row, col);
+				double[] vec2 = image2.get(row, col);
+				distanceSum += EuclidianDistance.calc(vec1, vec2);
 			}
 		}
-		double area = size.width * size.height;
-		return distanceSum / area;
+		double minValue = 0;
+		double maxValue = 255;
+		double rangeSize = maxValue - minValue;
+		return distanceSum / (size.area() * rangeSize);
 	}
 
 	public double compare(CharacterMatrix characterMatrix){
@@ -72,33 +62,19 @@ public class CharacterMatrix{
 		Size size2 = characterMatrix.character.size();
 		
 		Rect comparingPart = new Rect();//общая для обоих изображений область
-		comparingPart.height = (int)Math.min(size1.height, size2.height);
-		comparingPart.width  = (int)Math.min(size1.width,  size2.width);
-		
-		assert comparingPart.size().area() <= size1.area() && comparingPart.size().area() <= size2.area();
-		
-		Mat img1 = null;
-		Mat img2 = null;
-		double distance = 0;
+		comparingPart.height = (int)Math.max(size1.height, size2.height);
+		comparingPart.width  = (int)Math.max(size1.width,  size2.width);
 		
 		try{
-			img1 = this.getImagePart(comparingPart);
-			img2 = characterMatrix.getImagePart(comparingPart);
+			Mat img1 = this.getImagePart(comparingPart);
+			Mat img2 = characterMatrix.getImagePart(comparingPart);
 			
-			distance = CharacterMatrix.calcDistance(img1, img2);
-			//score = Core.norm(img1, img2);
+			return CharacterMatrix.calcDistance(img1, img2);
 		}
 		catch(Exception ex){
 			System.err.println(ex.getMessage());
 			return 1.0;
 		}
-		
-		double unused1 = size1.area() - comparingPart.size().area();
-		double unused2 = size2.area() - comparingPart.size().area();
-		double unused = unused1 + unused2;
-		double unusedAreaCoefficient = unused / (comparingPart.size().area() + unused);
-		
-		return distance + unusedAreaCoefficient;
 	}
 	
 	public void dump(File path) throws IOException{

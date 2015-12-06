@@ -1,10 +1,9 @@
 /*.png
 /*.bmp
 /*.jpg
-/levels/*
-/Photos/*
-/bin/*
+/testPhotos/
+/bin/
 /chars/
-/allChars/
 .classpath
 .project
+differences.txt
