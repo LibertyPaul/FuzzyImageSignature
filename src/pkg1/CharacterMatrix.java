@@ -77,7 +77,7 @@ public class CharacterMatrix{
 		}
 	}
 	
-	public void dump(File path) throws IOException{
+	public void dump(File path){
 		path.getParentFile().mkdirs();
 		Imgcodecs.imwrite(path.getAbsolutePath(), this.character);
 	}

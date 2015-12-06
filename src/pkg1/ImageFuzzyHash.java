@@ -18,7 +18,7 @@ import org.opencv.imgproc.Imgproc;
 
 public class ImageFuzzyHash{
 	protected Mat srcImage;
-	protected ImageFyzzyHashSum fuzzyHash;
+	protected ImageFuzzyHashSum fuzzyHash;
 
 	public ImageFuzzyHash(Mat srcImage){
 		assert srcImage != null;
@@ -68,7 +68,7 @@ public class ImageFuzzyHash{
 			Rect rect = Imgproc.boundingRect(new MatOfPoint(approxCurve2f.toArray()));
 			if(this.isCharacter(rect)){
 				rectangles.add(rect);
-				Imgproc.rectangle(testImage, rect.tl(), rect.br(), new Scalar(128, 128, 0));
+				Imgproc.rectangle(testImage, rect.tl(), rect.br(), new Scalar(255, 128, 0));
 			}
 		}
 		
@@ -83,34 +83,33 @@ public class ImageFuzzyHash{
 		return result;
 	}
 	
-	
-	
-	protected CharactersStatistics getFrequency() throws IOException{
+	public CharactersStatistics getCharactersStatistics(){
 		List<Rect> characterRectangles = this.getPerCharacterRectangles();
 		CharactersStatistics charStat = new CharactersStatistics();
 		
 		for(Rect rect : characterRectangles){
 			CharacterMatrix current = new CharacterMatrix(this.getSubMat(rect));
-			charStat.add(current);
+			DetectedCharacter character = new DetectedCharacter(rect, current);
+			charStat.add(character);
 		}
 		
 		return charStat;
 	}
 	
-	protected ImageFyzzyHashSum calcImageHash() throws IOException{
-		CharactersStatistics charStats = this.getFrequency();
-		List<Integer> frequences = charStats.getFrequencies();
-		//charStats.dump(new File("chars/"));
-		return new ImageFyzzyHashSum(frequences);
+	protected ImageFuzzyHashSum calcImageHash(){
+		CharactersStatistics charStats = this.getCharactersStatistics();
+		LinePage linePage = charStats.createLinePage();
+		List<CharacterId> characterIds = linePage.gerOrderedCharacters();
+		
+		return new ImageFuzzyHashSum(characterIds);
 	}
 	
-	public ImageFyzzyHashSum getImageFuzzyHash() throws IOException{
+	public ImageFuzzyHashSum getImageFuzzyHash() throws IOException{
 		if(this.fuzzyHash == null)
 			this.fuzzyHash = this.calcImageHash();
 		
 		return this.fuzzyHash;
 	}
-	
 	
 	public Mat getRectedImage(){
 		List<Rect> characterRectangles = this.getPerCharacterRectangles();
@@ -120,6 +119,16 @@ public class ImageFuzzyHash{
 		}
 		System.out.println(characterRectangles.size());
 		return imgCopy;
+	}
+	
+	public void dumpChars(File path){
+		CharactersStatistics cs = this.getCharactersStatistics();
+		cs.dump(path);
+	}
+	
+	public void dumpUnique(File path){
+		CharactersStatistics cs = this.getCharactersStatistics();
+		cs.dumpUnique(path);
 	}
 	
 	public void test(){

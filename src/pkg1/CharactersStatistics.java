@@ -21,7 +21,7 @@ public class CharactersStatistics{
 		return result;
 	}
 	
-	public void add(CharacterMatrix characterMatrix){
+	public void add(DetectedCharacter characterMatrix){
 		final double similarityBound = 0.13;
 	
 		int maxSimilarityPos = 0;
@@ -50,6 +50,31 @@ public class CharactersStatistics{
 		return new ArrayList<SimilarCharacterGroup>(this.characterGroups);
 	}
 	
+	protected List<Integer> getFrequencies(){
+		List<Integer> res = new ArrayList<>(this.characterGroups.size());
+		for(final SimilarCharacterGroup characterGroup : this.characterGroups){
+			res.add(characterGroup.getCount());
+		}
+		return res;
+	}
+	
+	public LinePage createLinePage(){
+		//TODO: перед вызовом этой функции нужно сливать группы одинаковых символов
+		LinePage linePage = new LinePage();
+		for(final SimilarCharacterGroup scg : this.characterGroups){
+			final CharacterId groupId = new CharacterId();
+			for(final DetectedCharacter character : scg.getCharacters()){
+				NumberedCharacter current = new NumberedCharacter(character.getRect(), groupId);
+				linePage.addCharacter(current);
+			}
+		}
+		return linePage;
+	}
+	
+
+	
+	
+	
 	@Override
 	public String toString(){
 		long count = this.getCount();
@@ -64,19 +89,18 @@ public class CharactersStatistics{
 		return result;
 	}
 	
-	public void dump(File path) throws IOException{
-		for(int i = 0; i < this.characterGroups.size(); ++i){
-			this.characterGroups.get(i).dumpCharacters(new File(path.getAbsolutePath() + "/" + i + "."));
+	public void dump(File path){
+		for(final SimilarCharacterGroup scg : this.characterGroups){
+			int id = System.identityHashCode(scg);
+			scg.dumpCharacters(new File(path.getAbsolutePath() + "/" + id + "."));
 		}
 	}
 	
-	protected List<Integer> getFrequencies(){
-		List<Integer> res = new ArrayList<>(this.characterGroups.size());
-		final int count = this.getCount();
-		for(final SimilarCharacterGroup characterGroup : this.characterGroups){
-			res.add(characterGroup.getCount());
+	public void dumpUnique(File path){
+		for(final SimilarCharacterGroup scg : this.characterGroups){
+			int id = System.identityHashCode(scg);
+			scg.dumpCharacter(new File(path.getAbsolutePath() + "/" + id + "."));
 		}
-		return res;
 	}
 }
 

@@ -27,15 +27,15 @@ public class Main{
 	
 	public static void mainTest() throws Exception{
 		List<String> testImages = Arrays.asList(
-				//"testPhotos/1.jpg",
-				//"testPhotos/2.jpg",
+				"testPhotos/1.jpg",
+				"testPhotos/2.jpg",
 				"testPhotos/3.jpg",
 				"testPhotos/4.jpg",
 				"testPhotos/5.jpg",
 				"testPhotos/6.jpg"
 		);
 		
-		List<ImageFyzzyHashSum> hashes = new ArrayList<>();
+		List<ImageFuzzyHashSum> hashes = new ArrayList<>();
 		
 		for(String fName : testImages){
 			ImageRecognizer ir = new ImageRecognizer(fName);
@@ -54,13 +54,11 @@ public class Main{
 			}
 			
 			ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
-			hasher.test();
-			break;
-			/*
-			ImageFyzzyHashSum hash = hasher.getImageFuzzyHash();
+			
+			ImageFuzzyHashSum hash = hasher.getImageFuzzyHash();
 			hashes.add(hash);
 			System.out.println(hash.toString());
-			*/
+			
 		}
 		
 		for(int first = 0; first < hashes.size() - 1; ++first){
@@ -74,47 +72,97 @@ public class Main{
 		System.out.println("done.");
 	}
 	
-	public static void testInMemorySsdeep(){
-		String testFileName = "Photos/testPage1.jpg";
+
+	
+	public static void getCharImages(){
+		ImageRecognizer ir = new ImageRecognizer("testPhotos/1.jpg");
+		Mat infoPart = null;
+		Mat codePart = null;
 		
-		ssdeep hasher = new ssdeep();
-		InMemorySsdeep inMemoryHasher = new InMemorySsdeep();
-		
-		String hashFromFile = null;
 		try{
-			hashFromFile = hasher.fuzzy_hash_file(new File(testFileName));
+			infoPart = ir.getInfoPart();
+			Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
+			codePart = ir.getCodePart();
+			Imgcodecs.imwrite("10.codePart.jpg", codePart);
 		}
-		catch(IOException e){
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		String hashFromMemory = null;
-		
-		Path path = Paths.get(testFileName);
-		try{
-			hashFromMemory = inMemoryHasher.fuzzy_hash_array(Files.readAllBytes(path));
-		}
-		catch(IOException e){
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		catch(Exception ex){
+			System.err.println(ex.getMessage());
+			return;
 		}
 		
-		if(hashFromFile.compareTo(hashFromMemory) == 0){
-			System.out.println("testInMemorySsdeep [ OK ]");
-		}
-		else{
-			System.out.println("testInMemorySsdeep [ ERROR ]");
-			System.out.println("Hash from file:    " + hashFromFile);
-			System.out.println("Hash from memory:  " + hashFromMemory);
-		}
+		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
+		hasher.dumpChars(new File("chars/"));
+		hasher.dumpUnique(new File("uniqueChars/"));
+		
 	}
+	
+	public static void testLinePage(){
+		ImageRecognizer ir = new ImageRecognizer("testPhotos/1.jpg");
+		Mat infoPart = null;
+		Mat codePart = null;
+		
+		try{
+			infoPart = ir.getInfoPart();
+			Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
+			codePart = ir.getCodePart();
+			Imgcodecs.imwrite("10.codePart.jpg", codePart);
+		}
+		catch(Exception ex){
+			System.err.println(ex.getMessage());
+			return;
+		}
+		
+		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
+		CharactersStatistics cs = hasher.getCharactersStatistics();
+		LinePage lp = cs.createLinePage();
+		Mat withLines = lp.drawLines(infoPart);
+		Imgcodecs.imwrite("15.WithLines.png", withLines);
+	}
+	
+	public static void getHash() throws IOException{
+		ImageRecognizer ir = new ImageRecognizer("testPhotos/1.jpg");
+		Mat infoPart = null;
+		Mat codePart = null;
+		
+		try{
+			infoPart = ir.getInfoPart();
+			Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
+			codePart = ir.getCodePart();
+			Imgcodecs.imwrite("10.codePart.jpg", codePart);
+		}
+		catch(Exception ex){
+			System.err.println(ex.getMessage());
+			return;
+		}
+		
+		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
+		ImageFuzzyHashSum hashSum = hasher.getImageFuzzyHash();
+		System.out.println(hashSum.toString());
+		
+	}
+	
+	public static void subMain() throws Exception{
+		//EuclidianDistance.test();
+		//Main.mainTest();
+		//Main.getCharImages();
+		//Main.testLinePage();
+		Main.getHash();
+		
+	}
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	public static void main(String[] args){
 		long startTime = System.currentTimeMillis();
 		
 		try{
-			Main.mainTest();
+			Main.subMain();
 		}
 		catch(Exception e){
 			// TODO Auto-generated catch block

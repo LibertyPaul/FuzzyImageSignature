@@ -8,88 +8,74 @@ import java.util.List;
 import java.util.Random;
 
 public class SimilarCharacterGroup implements Comparable<SimilarCharacterGroup>{
-	protected List<CharacterMatrix> characterList;
-	private static Random rg = null;
+	protected List<DetectedCharacter> characterList;
 	
 	private SimilarCharacterGroup(){
 		this.characterList = new ArrayList<>();
 	}
 	
-	public SimilarCharacterGroup(CharacterMatrix characterMatrix){
+	public SimilarCharacterGroup(DetectedCharacter character){
 		this();
-		this.characterList.add(characterMatrix);
+		this.characterList.add(character);
 	}
 	
-	protected static Random getRandomGenerator(){
-		if(SimilarCharacterGroup.rg == null){
-			SimilarCharacterGroup.rg = new Random();
-		}
-		return SimilarCharacterGroup.rg;
-	}
-	
-	protected CharacterMatrix getRandomCharacter(){
-		int index = SimilarCharacterGroup.getRandomGenerator().nextInt(this.characterList.size());
-		return characterList.get(index);
-	}
-	
-	private double getMedian(List<Double> src){
-		assert src.size() > 0;
-		List<Double> copy = new ArrayList<>(src);
-		Collections.sort(copy);
-		return copy.get(copy.size() / 2);
-	}
-	
-	public double fullComparsion(CharacterMatrix characterMatrix){
-		//double sum = 0;
+	protected static double comapreWith(final DetectedCharacter character, final List<DetectedCharacter> characters){
 		List<Double> values = new ArrayList<>();
-		
-		for(CharacterMatrix cm : this.characterList){
-			double current = cm.compare(characterMatrix);
-			//sum += current;
+		for(final DetectedCharacter currentCharacter : characters){
+			final double current = currentCharacter.getMatrix().compare(character.getMatrix());
 			values.add(current);
 		}
-		//return sum / this.characterList.size();
-		return this.getMedian(values);
+		return EuclidianDistance.calc(values);
 	}
 	
-	public double randomComparsion(CharacterMatrix characterMatrix){
-		CharacterMatrix random = this.getRandomCharacter();
-		return random.compare(characterMatrix);
+	public double fullComparsion(DetectedCharacter characterMatrix){		
+		return SimilarCharacterGroup.comapreWith(characterMatrix, this.characterList);
 	}
 	
-	public double multipleRandomComparsion(CharacterMatrix characterMatrix, int count){
+	public double multipleRandomComparsion(DetectedCharacter character, int count){
 		assert count >= 0;
 		if(this.characterList.size() <= count){
-			return this.fullComparsion(characterMatrix);
+			return this.fullComparsion(character);
 		}
-		//double sum = 0;
-		List<Double> values = new ArrayList<>();
-		for(int i = 0; i < count; ++i){
-			double current = this.randomComparsion(characterMatrix);
-			//sum += current;
-			values.add(current);
-		}
-		//return sum / this.characterList.size();
-		return this.getMedian(values);
+		
+		Collections.shuffle(this.characterList);
+		List<DetectedCharacter> subList = this.characterList.subList(0, count);
+		
+		return SimilarCharacterGroup.comapreWith(character, subList);
 	}
 	
-	public void addCharacter(CharacterMatrix characterMatrix){
-		this.characterList.add(characterMatrix);
+	public void addCharacter(DetectedCharacter character){
+		this.characterList.add(character);
 	}
 	
 	public int getCount(){
 		return this.characterList.size();
 	}
 
+	public List<DetectedCharacter> getCharacters(){
+		return this.characterList;
+	}
+	
+	
+	
+	
 	@Override
 	public int compareTo(SimilarCharacterGroup o){
 		return this.characterList.size() - o.characterList.size();
 	}
 	
-	public void dumpCharacters(File path) throws IOException{
-		for(int i = 0; i < this.characterList.size(); ++i){
-			this.characterList.get(i).dump(new File(path.getAbsolutePath() + "." + i + ".bmp"));
-		}
+	public void dumpCharacter(File path){
+		assert this.characterList.size() > 0;
 		
+		final DetectedCharacter cm = this.characterList.get(0);
+		int currentId = System.identityHashCode(cm);
+		cm.getMatrix().dump(new File(path.getAbsolutePath() + "." + currentId + ".bmp"));
+	}
+	
+	public void dumpCharacters(File path){
+		for(final DetectedCharacter cm : this.characterList){
+			int currentId = System.identityHashCode(cm);
+			cm.getMatrix().dump(new File(path.getAbsolutePath() + "." + currentId + ".bmp"));
+		}
 	}
 }
