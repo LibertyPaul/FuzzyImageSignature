@@ -61,11 +61,6 @@ public class Main{
 			
 		}
 		
-		for(int first = 0; first < hashes.size() - 1; ++first){
-			for(int second = first + 1; second < hashes.size(); ++second){
-				System.out.println(first + " <--> " + second + " : " + hashes.get(first).calcDifference(hashes.get(second)));
-			}
-		}
 		
 		
 		
@@ -119,26 +114,24 @@ public class Main{
 		Imgcodecs.imwrite("15.WithLines.png", withLines);
 	}
 	
-	public static void getHash() throws IOException{
-		ImageRecognizer ir = new ImageRecognizer("testPhotos/1.jpg");
-		Mat infoPart = null;
-		Mat codePart = null;
+	public static ImageFuzzyHashSum getHash(String path) throws Exception{
+		ImageRecognizer ir = new ImageRecognizer(path);
 		
-		try{
-			infoPart = ir.getInfoPart();
-			Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
-			codePart = ir.getCodePart();
-			Imgcodecs.imwrite("10.codePart.jpg", codePart);
-		}
-		catch(Exception ex){
-			System.err.println(ex.getMessage());
-			return;
-		}
+		Mat infoPart = ir.getInfoPart();
+		Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
+		Mat codePart = ir.getCodePart();
+		Imgcodecs.imwrite("10.codePart.jpg", codePart);
 		
 		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
-		ImageFuzzyHashSum hashSum = hasher.getImageFuzzyHash();
-		System.out.println(hashSum.toString());
+		return hasher.getImageFuzzyHash();
+	}
+	
+	public static void testHash() throws Exception{
+		ImageFuzzyHashSum sum1 = getHash("testPhotos/3.jpg");
+		ImageFuzzyHashSum sum2 = getHash("testPhotos/2.jpg");
 		
+		System.out.println(sum1.toString());
+		System.out.println(sum2.toString());
 	}
 	
 	public static void subMain() throws Exception{
@@ -146,7 +139,7 @@ public class Main{
 		//Main.mainTest();
 		//Main.getCharImages();
 		//Main.testLinePage();
-		Main.getHash();
+		Main.testHash();
 		
 	}
 	

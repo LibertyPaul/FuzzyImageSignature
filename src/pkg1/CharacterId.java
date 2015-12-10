@@ -1,7 +1,7 @@
 package pkg1;
 
-public final class CharacterId{
-	private static int next_id;
+public final class CharacterId implements Comparable<CharacterId>{
+	private static int next_id = 100;//id != 0
 	private final int id;
 	
 	private CharacterId(int id){
@@ -24,7 +24,33 @@ public final class CharacterId{
 		return this.id == o.id;
 	}
 	
+	public int compareTo(CharacterId o){
+		return this.id - o.id;
+	}
+	
+	public int getIdLength(){
+		return Integer.toString(this.id).length();
+	}
+	
 	public String toString(){
 		return Integer.toString(this.id);
 	}
+	
+	public String toString(final int blockSize) throws Exception{
+		String id_s = String.format("%0" + blockSize + "d", this.id);
+		if(id_s.length() != blockSize){
+			throw new Exception("Incorrect id_s length");
+		}
+		return id_s;
+	}
+	
+	public static CharacterId fromString(final String string){
+		String id_s = string.replaceFirst("^0*(?!$)", "");//remove leading zeroes
+		int id = Integer.parseInt(id_s);
+		return new CharacterId(id);
+	}
+
 }
+
+
+

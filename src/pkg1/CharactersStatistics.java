@@ -28,7 +28,7 @@ public class CharactersStatistics{
 		double minDifference = similarityBound + 42;//заведомо несовпадающее значение
 		for(int i = 0; i < this.characterGroups.size(); ++i){
 			//double currentDifference = this.characterGroups.get(i).fullComparsion(characterMatrix);
-			double currentDifference = this.characterGroups.get(i).multipleRandomComparsion(characterMatrix, 5);
+			double currentDifference = this.characterGroups.get(i).fullComparsion(characterMatrix);
 			if(currentDifference < minDifference){
 				minDifference = currentDifference;
 				maxSimilarityPos = i;

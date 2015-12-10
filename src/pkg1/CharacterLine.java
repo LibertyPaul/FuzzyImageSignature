@@ -34,7 +34,7 @@ public class CharacterLine{
 	
 	private void insertCharacter(NumberedCharacter character){
 		for(int pos = 0; pos < this.characters.size(); ++pos){
-			if(this.characters.get(pos).leftX() < character.leftX()){
+			if(this.characters.get(pos).leftX() > character.leftX()){
 				this.characters.add(pos, character);
 				return;
 			}
@@ -51,10 +51,6 @@ public class CharacterLine{
 		this.lowerBound = Math.max(this.lowerBound, character.bottomY());
 	}
 	
-	public int getCharacterCount(){
-		return this.characters.size();
-	}
-	
 	public List<NumberedCharacter> getLine(){
 		return this.characters;
 	}
@@ -66,4 +62,17 @@ public class CharacterLine{
 	public double bottomY(){
 		return this.lowerBound;
 	}
+	
+	public double leftX(){
+		return this.characters.get(0).leftX();
+	}
+	
+	public double rightX(){
+		return this.characters.get(this.characters.size() - 1).rightX();
+	}
+	
+	public double width(){
+		return this.rightX() - this.leftX();
+	}
+
 }

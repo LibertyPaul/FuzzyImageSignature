@@ -96,15 +96,15 @@ public class ImageFuzzyHash{
 		return charStat;
 	}
 	
-	protected ImageFuzzyHashSum calcImageHash(){
+	protected ImageFuzzyHashSum calcImageHash() throws Exception{
 		CharactersStatistics charStats = this.getCharactersStatistics();
 		LinePage linePage = charStats.createLinePage();
-		List<CharacterId> characterIds = linePage.gerOrderedCharacters();
+		List<MarginedLine> characterLines = linePage.getOrderedCharacterLines(srcImage.width());
 		
-		return new ImageFuzzyHashSum(characterIds);
+		return new ImageFuzzyHashSum(characterLines);
 	}
 	
-	public ImageFuzzyHashSum getImageFuzzyHash() throws IOException{
+	public ImageFuzzyHashSum getImageFuzzyHash() throws Exception{
 		if(this.fuzzyHash == null)
 			this.fuzzyHash = this.calcImageHash();
 		

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import jdk.internal.dynalink.beans.StaticClass;
+
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
@@ -54,18 +56,32 @@ public class LinePage{
 		return result;
 	}
 	
-	public List<CharacterId> gerOrderedCharacters(){
-		int charactersCount = 0;
-		for(final CharacterLine line : this.lines){
-			charactersCount += line.getCharacterCount();
-		}
-		
-		List<CharacterId> result = new ArrayList<>(charactersCount);
+	public List<MarginedLine> getOrderedCharacterLines(final double pageSize) throws Exception{
+		List<MarginedLine> result = new ArrayList<>(this.lines.size());
 		
 		for(final CharacterLine line : this.lines){
-			for(final NumberedCharacter character : line.getLine()){
-				result.add(character.getId());
+			List<MarginedCharacter> characters = new ArrayList<>();
+			NumberedCharacter previous = line.getLine().get(0);
+			final MarginedCharacter first = new MarginedCharacter(0, previous.getId());
+			characters.add(first);
+			
+			final int spaceCount = 1000;
+			double lineWidth_abs = line.width();
+			double atomSize = lineWidth_abs / spaceCount;
+			
+			for(int i = 1; i < line.getLine().size(); ++i){
+				NumberedCharacter current = line.getLine().get(i);
+				double position_rel = current.leftX() / atomSize;
+				
+				final MarginedCharacter currentCharacter = new MarginedCharacter((int)position_rel, line.getLine().get(i).getId());
+				characters.add(currentCharacter);
+				
+				previous = current;
 			}
+			
+			double lineWidth_rel = lineWidth_abs / pageSize;
+			MarginedLine currentLine = new MarginedLine(characters, (int)lineWidth_rel);
+			result.add(currentLine);
 		}
 		
 		return result;
