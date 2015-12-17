@@ -13,6 +13,7 @@ public class CharacterLine{
 		this.characters  = new LinkedList<>();
 		this.higherBound = character.topY();
 		this.lowerBound  = character.bottomY();
+		this.characters.add(character);
 	}
 	
 	public boolean isInLine(NumberedCharacter character){

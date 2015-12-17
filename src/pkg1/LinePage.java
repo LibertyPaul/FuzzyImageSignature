@@ -62,25 +62,25 @@ public class LinePage{
 		for(final CharacterLine line : this.lines){
 			List<MarginedCharacter> characters = new ArrayList<>();
 			NumberedCharacter previous = line.getLine().get(0);
-			final MarginedCharacter first = new MarginedCharacter(0, previous.getId());
+			final MarginedCharacter first = new MarginedCharacter(0, previous.getId(), previous.getRect());
 			characters.add(first);
 			
-			final int spaceCount = 1000;
 			double lineWidth_abs = line.width();
-			double atomSize = lineWidth_abs / spaceCount;
 			
 			for(int i = 1; i < line.getLine().size(); ++i){
 				NumberedCharacter current = line.getLine().get(i);
-				double position_rel = current.leftX() / atomSize;
+				double fromStart = current.leftX() - line.leftX();
+				double fromEnd 	 = line.rightX() - current.leftX();
+				double position_rel = fromStart / (fromStart + fromEnd); 
 				
-				final MarginedCharacter currentCharacter = new MarginedCharacter((int)position_rel, line.getLine().get(i).getId());
+				final MarginedCharacter currentCharacter = new MarginedCharacter(position_rel, line.getLine().get(i).getId(), current.getRect());
 				characters.add(currentCharacter);
 				
 				previous = current;
 			}
 			
 			double lineWidth_rel = lineWidth_abs / pageSize;
-			MarginedLine currentLine = new MarginedLine(characters, (int)lineWidth_rel);
+			MarginedLine currentLine = new MarginedLine(characters, lineWidth_rel);
 			result.add(currentLine);
 		}
 		

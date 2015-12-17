@@ -1,28 +1,29 @@
 package pkg1;
 
-public class MarginedCharacter{
-	private final int position;//расстояние от начала строки
+import org.opencv.core.Rect;
+
+public class MarginedCharacter implements Comparable<MarginedCharacter>{
+	private final static int strBlockPrecision = 1000;//по 3 цифры на позицию и на id
+	private final double position;//расстояние от начала строки
 	private final CharacterId id;
+	private final Rect rect;
 	
-	public MarginedCharacter(final int position, final CharacterId id) throws Exception{
+	public MarginedCharacter(final double position, final CharacterId id, final Rect rect) throws Exception{
 		assert position >= 0;
-		if(position == 0){
-			this.position = 1;
-		}
-		else{
-			this.position = position;
-		}
 		
-		if(Integer.toString(this.position).length() > 3){
-			throw new Exception("Too long spaceBefore");
-		}
-		
+		this.position = position;
 		this.id = id;
+		this.rect = rect;
+	}
+	
+	public MarginedCharacter(final double position, final CharacterId id) throws Exception{
+		this(position, id, null);
 	}
 	
 	public MarginedCharacter(final MarginedCharacter character){
 		this.position = character.position;
 		this.id = character.id;
+		this.rect = character.rect;
 	}
 	
 	public CharacterId getId(){
@@ -30,23 +31,40 @@ public class MarginedCharacter{
 	}
 	
 	public double getPosition(){
-		return (double)this.position / 1000;
+		return this.position;
 	}
 	
-	/*
-	public int getRelativePosition(){
-		return Integer.toString(this.position).length();
+	public Rect getRect(){
+		return this.rect;
 	}
-	*/
+	
+	private int getIntegerPosition(){
+		return (int)Math.round(this.position * strBlockPrecision);
+	}
+	
+	public String getPosition_s(){
+		return Integer.toString(this.getIntegerPosition());
+	}
+	
+	public String getId_s(){
+		return this.id.toString();
+	}
+
 	public String toString(final int blockSize) throws Exception{
 		assert blockSize > 0;
 		
+		
 		String id_s = this.id.toString(blockSize);
-		String spaceBefore_s = String.format("%0" + blockSize + "d", this.position);
-		if(spaceBefore_s.length() != blockSize){
+
+		int intPos = this.getIntegerPosition();
+		if(intPos == 0){
+			intPos = 1;//нельзя вставлять нулевое значение
+		}
+		String position_s = String.format("%0" + blockSize + "d", intPos);
+		if(position_s.length() != blockSize){
 			throw new Exception("Incorrect spaceBefore_s length");
 		}
-		return id_s + spaceBefore_s;
+		return id_s + position_s;
 	}
 	
 	public static MarginedCharacter fromString(String string) throws Exception{
@@ -61,6 +79,14 @@ public class MarginedCharacter{
 		int spaceBefore = Integer.parseUnsignedInt(spaceBefore_s);
 		
 		return new MarginedCharacter(spaceBefore, id);
+	}
+	
+	public boolean equals(final MarginedCharacter o){
+		return this.id.equals(o.id);
+	}
+	
+	public int compareTo(final MarginedCharacter o){
+		return this.id.compareTo(o.id);
 	}
 	
 }

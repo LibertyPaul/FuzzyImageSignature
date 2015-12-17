@@ -27,7 +27,7 @@ public class ImageRecognizer{
 		Imgcodecs.imwrite("1.bnw.png", bnw);
 		
 		Mat blurred = new Mat();
-		Imgproc.GaussianBlur(bnw, blurred, new Size(5, 5), 10.0);
+		Imgproc.GaussianBlur(bnw, blurred, new Size(3, 3), 5.0);
 		Imgcodecs.imwrite("2.blurred.png", blurred);
 		
 		Mat edges = new Mat();
@@ -177,7 +177,7 @@ public class ImageRecognizer{
 	}
 	
 	//getPageCoords ищет на изображении метки, по которым определяет границы
-	protected boolean recognize() throws Exception{
+	protected void recognize() throws Exception{
 		List<MatOfPoint> countors = this.getFilteredCountors();
 		
 		List<Point> contourCenters = new ArrayList<>();
@@ -242,8 +242,9 @@ public class ImageRecognizer{
 			}
 		}
 		
-		if(angles.size() == 0)
-			return false;
+		if(angles.size() == 0){
+			throw new Exception("All incorrect lines was filtered, none left. Aborting.");
+		}
 		
 		Collections.sort(angles, Collections.reverseOrder());
 		
@@ -251,10 +252,11 @@ public class ImageRecognizer{
 		ThreePoints line1 = winner.line1;
 		ThreePoints line2 = winner.line2;
 		
-		double relativeAngle = ThreePoints.getAngle(line1, line2);
-		if(Math.abs(relativeAngle) > Math.PI / 8)
+		final double relativeAngle = ThreePoints.getAngle(line1, line2) % Math.PI;
+		final double maxAngleDiff = Math.PI / 8;
+		if(relativeAngle > maxAngleDiff && relativeAngle < -maxAngleDiff){
 			throw new Exception("Lines are not parallel");
-		
+		}
 
 		double angle = line1.getAngle();
 		int degrees = ((int)Math.toDegrees(angle) + 360) % 360;
@@ -274,7 +276,6 @@ public class ImageRecognizer{
 			this.rightBound = line1;
 		}
 		
-		return true;
 	}
 	
 	protected static Mat getImagePart(Mat srcImage, Point topLeft, Point topRight, Point bottomRight, Point bottomLeft){
@@ -375,10 +376,7 @@ public class ImageRecognizer{
 	
 	public Mat getInfoPart() throws Exception{
 		if(this.leftBound == null || this.rightBound == null){
-			boolean res = this.recognize();
-			if(res == false){
-				throw new Exception("Recognition failed");
-			}
+			this.recognize();
 		}		
 		Mat withAnchors = ImageRecognizer.getImagePart(this.srcImage,
 			this.leftBound.getFirst(), this.rightBound.getFirst(),
@@ -390,16 +388,14 @@ public class ImageRecognizer{
 		Mat withoutAnchors = ImageRecognizer.cutSides(withAnchors, anchorSize);
 		Imgcodecs.imwrite("13.withoutAnchors.png", withoutAnchors);
 		
-		Mat trimmed = ImageRecognizer.trim(withoutAnchors);
-		return trimmed;
+		//Mat trimmed = ImageRecognizer.trim(withoutAnchors);
+		//return trimmed;
+		return withoutAnchors;
 	}
 	
 	public Mat getCodePart() throws Exception{
 		if(this.leftBound == null || this.rightBound == null){
-			boolean res = this.recognize();
-			if(res == false){
-				throw new Exception("Recognition failed");
-			}
+			this.recognize();
 		}
 		Mat withAnchors = ImageRecognizer.getImagePart(this.srcImage,
 			this.leftBound.getBetween(), this.rightBound.getBetween(),
@@ -407,8 +403,10 @@ public class ImageRecognizer{
 		);
 		int anchorSize = (int) ImageRecognizer.getAnchorSize(withAnchors.cols(), withAnchors.rows());
 		Mat withoutAnchors = ImageRecognizer.cutSides(withAnchors, anchorSize);
-		Mat trimmed = ImageRecognizer.trim(withoutAnchors);
-		return trimmed;
+		
+		//Mat trimmed = ImageRecognizer.trim(withoutAnchors);
+		//return trimmed;
+		return withoutAnchors;
 	}
 }
 

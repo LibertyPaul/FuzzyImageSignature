@@ -28,13 +28,16 @@ public class Main{
 	public static void mainTest() throws Exception{
 		List<String> testImages = Arrays.asList(
 				"testPhotos/1.jpg",
-				"testPhotos/2.jpg",
+				//"testPhotos/2.jpg",
 				"testPhotos/3.jpg",
-				"testPhotos/4.jpg",
-				"testPhotos/5.jpg",
-				"testPhotos/6.jpg"
+				"testPhotos/fake/1.jpg",
+				"testPhotos/fake/2.jpg"
+				//"testPhotos/4.jpg",
+				//"testPhotos/5.jpg",
+				//"testPhotos/6.jpg"
 		);
 		
+		List<Mat> infoParts = new ArrayList<>();
 		List<ImageFuzzyHashSum> hashes = new ArrayList<>();
 		
 		for(String fName : testImages){
@@ -49,6 +52,7 @@ public class Main{
 				Imgcodecs.imwrite("10.codePart.bmp", codePart);
 			}
 			catch(Exception ex){
+				ex.printStackTrace();
 				System.err.println(ex.getMessage());
 				continue;
 			}
@@ -56,12 +60,22 @@ public class Main{
 			ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
 			
 			ImageFuzzyHashSum hash = hasher.getImageFuzzyHash();
+			infoParts.add(infoPart);
 			hashes.add(hash);
-			System.out.println(hash.toString());
-			
+			hash.verbose();
 		}
 		
+		assert hashes.size() == infoParts.size();
 		
+		for(int first = 0; first < hashes.size() - 1; ++first){
+			for(int second = first + 1; second < hashes.size(); ++second){
+				HashCompareResult res = hashes.get(first).compare(hashes.get(second));
+				System.out.printf("%d <=> %d : %f\n", first, second, res.getScore());
+				
+				Mat withErrors = res.putErrors(infoParts.get(first));
+				Imgcodecs.imwrite("withErrors" + first + "-" + second + ".png", withErrors);
+			}
+		}
 		
 		
 		System.out.println("done.");
@@ -134,13 +148,85 @@ public class Main{
 		System.out.println(sum2.toString());
 	}
 	
+	public static void testCharMatrixComparsion(){
+		ImageRecognizer ir = new ImageRecognizer("testPhotos/3.jpg");
+		Mat infoPart = null;
+		Mat codePart = null;
+		
+		try{
+			infoPart = ir.getInfoPart();
+			Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
+			codePart = ir.getCodePart();
+			Imgcodecs.imwrite("10.codePart.jpg", codePart);
+		}
+		catch(Exception ex){
+			System.err.println(ex.getMessage());
+			return;
+		}
+		
+		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
+		hasher.testCharMatrixComparsion();
+	}
+	
+	public static void testCharsComparsion(){
+		List<String> filePaths = Arrays.asList(
+			"/home/libertypaul/programming/FuzzySignature/chars/870698190..1634198.bmp",
+			"/home/libertypaul/programming/FuzzySignature/chars/870698190..12209492.bmp",
+			"/home/libertypaul/programming/FuzzySignature/chars/1450821318..5592464.bmp",
+			"/home/libertypaul/programming/FuzzySignature/chars/1450821318..104739310.bmp",
+			"/home/libertypaul/programming/FuzzySignature/chars/1740000325..1142020464.bmp",	
+			"/home/libertypaul/programming/FuzzySignature/chars/1740000325..1626877848.bmp",
+			"/home/libertypaul/programming/FuzzySignature/chars/1744347043..59559151.bmp",
+			"/home/libertypaul/programming/FuzzySignature/chars/1744347043..99747242.bmp"
+		);
+		
+		List<CharacterMatrix> characterMatrices = new ArrayList<>(filePaths.size());
+		for(final String path : filePaths){
+			Mat image = Imgcodecs.imread(path);
+			CharacterMatrix current = new CharacterMatrix(image);
+			characterMatrices.add(current);
+		}
+		
+		for(int first = 0; first < characterMatrices.size() - 1; ++first){
+			for(int second = first + 1; second < characterMatrices.size(); ++second){
+				CharacterMatrix o1 = characterMatrices.get(first);
+				CharacterMatrix o2 = characterMatrices.get(second);
+				
+				double result = o1.compare(o2);
+				System.out.printf("%d <-> %d = %f\n", first, second, result);
+			}
+		}
+	}
+	
+	public static void testCharStats(){
+		
+		ImageRecognizer ir = new ImageRecognizer("testPhotos/3.jpg");
+		Mat infoPart = null;
+		Mat codePart = null;
+		
+		try{
+			infoPart = ir.getInfoPart();
+			Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
+			codePart = ir.getCodePart();
+			Imgcodecs.imwrite("10.codePart.jpg", codePart);
+		}
+		catch(Exception ex){
+			System.err.println(ex.getMessage());
+			return;
+		}
+		
+		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
+		hasher.testCharStat();
+	}
+	
 	public static void subMain() throws Exception{
-		//EuclidianDistance.test();
-		//Main.mainTest();
+		Main.mainTest();
 		//Main.getCharImages();
 		//Main.testLinePage();
-		Main.testHash();
-		
+		//Main.testHash();
+		//Main.testCharMatrixComparsion();
+		//Main.testCharsComparsion();
+		//Main.testCharStats();
 	}
 	
 	

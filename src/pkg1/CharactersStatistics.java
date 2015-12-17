@@ -22,27 +22,33 @@ public class CharactersStatistics{
 	}
 	
 	public void add(DetectedCharacter characterMatrix){
-		final double similarityBound = 0.13;
-	
-		int maxSimilarityPos = 0;
-		double minDifference = similarityBound + 42;//заведомо несовпадающее значение
-		for(int i = 0; i < this.characterGroups.size(); ++i){
-			//double currentDifference = this.characterGroups.get(i).fullComparsion(characterMatrix);
-			double currentDifference = this.characterGroups.get(i).fullComparsion(characterMatrix);
-			if(currentDifference < minDifference){
-				minDifference = currentDifference;
-				maxSimilarityPos = i;
-			}
-		}
-		
-		if(minDifference < similarityBound){
-			//если похожи, то добавляем в корзину
-			this.characterGroups.get(maxSimilarityPos).addCharacter(characterMatrix);
-		}
-		else{
-			//иначе создаем новую корзину
+		if(this.characterGroups.size() == 0){
 			SimilarCharacterGroup similarGroup = new SimilarCharacterGroup(characterMatrix);
 			this.characterGroups.add(similarGroup);
+		}
+		else{
+			final double similarityBound = 0.224;
+		
+			int maxSimilarityPos = 0;
+			double minScore = this.characterGroups.get(0).fullComparsion(characterMatrix);
+			for(int i = 1; i < this.characterGroups.size(); ++i){
+				double currentScore = this.characterGroups.get(i).fullComparsion(characterMatrix);
+				
+				if(currentScore < minScore){
+					minScore = currentScore;
+					maxSimilarityPos = i;
+				}
+			}
+			
+			if(minScore < similarityBound){
+				//если похожи, то добавляем в корзину
+				this.characterGroups.get(maxSimilarityPos).addCharacter(characterMatrix);
+			}
+			else{
+				//иначе создаем новую корзину
+				SimilarCharacterGroup similarGroup = new SimilarCharacterGroup(characterMatrix);
+				this.characterGroups.add(similarGroup);
+			}
 		}
 	}
 	
@@ -81,9 +87,9 @@ public class CharactersStatistics{
 		List<SimilarCharacterGroup> sorted = new ArrayList<>(this.characterGroups);
 		Collections.sort(sorted, Collections.reverseOrder());
 
-		String result = "" + count + " " + sorted.size() + " ";
+		String result = "" + count + " " + sorted.size() + "\n";
 		for(SimilarCharacterGroup characterGroup : sorted){
-			result += characterGroup.getCount() + " ";
+			result += (double)characterGroup.getCount() / count + "\n";
 		}
 		
 		return result;

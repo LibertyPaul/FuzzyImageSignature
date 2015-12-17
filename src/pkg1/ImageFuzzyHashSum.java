@@ -1,5 +1,8 @@
 package pkg1;
 
+import java.sql.Array;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +13,7 @@ import java.util.TreeMap;
 
 public class ImageFuzzyHashSum{
 	private List<MarginedLine> marginedLines;
-	private static final int groupSizeLength = 4;
+	private static final int groupSizeLength = 3;
 	
 	public ImageFuzzyHashSum(List<MarginedLine> marginedLines){
 		this.marginedLines = marginedLines;
@@ -34,8 +37,8 @@ public class ImageFuzzyHashSum{
 		int groupSize = 0;//кол-во десятичных разрядов для самого большого числа. (к остальным допишутся нули)
 		for(final MarginedLine line : marginedLines){
 			for(final MarginedCharacter id : line.getCharacters()){
-				groupSize = Math.max(groupSize, id.getId().getIdLength());
-				groupSize = Math.max(groupSize, id.getSpaceLength());
+				groupSize = Math.max(groupSize, id.getId_s().length());
+				groupSize = Math.max(groupSize, id.getPosition_s().length());
 			}
 		}
 		assert Integer.toString(groupSize).length() <= ImageFuzzyHashSum.groupSizeLength;
@@ -88,24 +91,16 @@ public class ImageFuzzyHashSum{
 		return new ImageFuzzyHashSum(marginedLines);
 	}
 	
-	private static boolean isHole(int space1, int space2){
-		final int factor = 5;
-		return (
-			(double)space1 / space2 > factor ||
-			(double)space2 / space1 > factor
-		);
-	}
-	
-	private static Map<CharacterId, List<CharacterId>> mergeMaps(Map<CharacterId, List<CharacterId>> map1, Map<CharacterId, List<CharacterId>> map2){
-		Map<CharacterId, List<CharacterId>> result = new TreeMap<>(map1);
+	private static Map<MarginedCharacter, List<MarginedCharacter>> mergeMaps(Map<MarginedCharacter, List<MarginedCharacter>> map1, Map<MarginedCharacter, List<MarginedCharacter>> map2){
+		Map<MarginedCharacter, List<MarginedCharacter>> result = new TreeMap<>(map1);
 		
-		for(final Entry<CharacterId, List<CharacterId>> entry : map2.entrySet()){
-			List<CharacterId> current = result.get(entry.getKey());
+		for(final Entry<MarginedCharacter, List<MarginedCharacter>> entry : map2.entrySet()){
+			List<MarginedCharacter> current = result.get(entry.getKey());
 			if(current == null){
 				result.put(entry.getKey(), entry.getValue());
 			}
 			else{
-				List<CharacterId> both = new ArrayList<>();
+				List<MarginedCharacter> both = new ArrayList<>();
 				both.addAll(current);
 				both.addAll(entry.getValue());
 				result.put(entry.getKey(), both);
@@ -115,16 +110,16 @@ public class ImageFuzzyHashSum{
 		return result;
 	}
 	
-	private static List<CharMatch> getCharMatch(final Map<CharacterId, List<CharacterId>> charMap){
-		Set<Entry<CharacterId, List<CharacterId>>> mapEntrySet = charMap.entrySet();
-		List<CharMatch> result = new ArrayList<>(mapEntrySet.size());
+	private static Map<MarginedCharacter, MarginedCharacter> getCharMatch(final Map<MarginedCharacter, List<MarginedCharacter>> charMap){
+		Set<Entry<MarginedCharacter, List<MarginedCharacter>>> mapEntrySet = charMap.entrySet();
+		Map<MarginedCharacter, MarginedCharacter> result = new TreeMap<>();
 		
-		for(final Entry<CharacterId, List<CharacterId>> entry : mapEntrySet){
-			CharacterId id = entry.getKey();
-			List<CharacterId> candidates = entry.getValue();
+		for(final Entry<MarginedCharacter, List<MarginedCharacter>> entry : mapEntrySet){
+			MarginedCharacter id = entry.getKey();
+			List<MarginedCharacter> candidates = entry.getValue();
 			
-			TreeMap<CharacterId, Integer> candidatesMap = new TreeMap<>();
-			for(final CharacterId candidate : candidates){
+			TreeMap<MarginedCharacter, Integer> candidatesMap = new TreeMap<>();
+			for(final MarginedCharacter candidate : candidates){
 				if(candidatesMap.containsKey(candidate)){
 					Integer currentCount = candidatesMap.get(candidate);
 					candidatesMap.put(candidate, currentCount + 1);
@@ -134,9 +129,9 @@ public class ImageFuzzyHashSum{
 				}
 			}
 			
-			CharacterId mostFrequent = null;
+			MarginedCharacter mostFrequent = null;
 			Integer maxScore = 0;
-			for(final Entry<CharacterId, Integer> candidateScore : candidatesMap.entrySet()){
+			for(final Entry<MarginedCharacter, Integer> candidateScore : candidatesMap.entrySet()){
 				Integer score = candidateScore.getValue();
 				if(score > maxScore){
 					maxScore = score;
@@ -144,33 +139,102 @@ public class ImageFuzzyHashSum{
 				}
 			}
 			
-			CharMatch match = new CharMatch(id, mostFrequent);
-			result.add(match);
+			result.put(id, mostFrequent);
 		}
 		
 		return result;
 	}
 	
-	public double compare(ImageFuzzyHashSum o) throws Exception{
+	public HashCompareResult compare(ImageFuzzyHashSum o) throws Exception{
 		List<MarginedLine> list1 = this.marginedLines;
 		List<MarginedLine> list2 = o.marginedLines;
 		
-		if(list1.size() != list2.size()){
-			throw new Exception("list1.size() != list2.size()");
+		final int lineSizeDifferenceBound = 15;//на какое кол-во символов могут отличаться строки
+		for(int i1 = 0, i2 = 0; i1 < list1.size() - 1 && i2 < list2.size() - 1; ++i1, ++i2){
+			final int line1Size = list1.get(i1).getCharacters().size();
+			final int line2Size = list2.get(i2).getCharacters().size();
+			if(Math.abs(line1Size - line2Size) > lineSizeDifferenceBound){
+				//строки слишком разного размера
+				//пробуем сначала сдвинуть первую а потом вторую, оцениваем результаты и применяем наиболее удачный вариант
+				
+				final int line12Size = list1.get(i1 + 1).getCharacters().size();
+				final int topShiftDifference = Math.abs(line2Size - line12Size);
+				
+				final int line22Size = list1.get(i2 + 1).getCharacters().size();
+				final int bottomShiftDifference = Math.abs(line1Size - line22Size);
+				
+				if(topShiftDifference > bottomShiftDifference){
+					list2.remove(i2);
+					System.out.printf("Line %d was removed from line2\n", i2);
+				}
+				else{
+					list1.remove(i1);
+					System.out.printf("Line %d was removed from line1\n", i1);
+				}
+				
+				--i1;
+				--i2;
+			}
+		}
+		//если все-таки не получилось выравнять
+		//берем и тупо отрезаем лишние строки
+		while(list1.size() > list2.size()){
+			list1.remove(list1.size() - 1);
 		}
 
-		Map<CharacterId, List<CharacterId>> idMatching = new TreeMap<>();
-		for(int line = 0; line < list1.size(); ++line){
-			MarginedLine line1 = list1.get(line);
-			MarginedLine line2 = list2.get(line);
+		while(list2.size() > list1.size()){
+			list2.remove(list2.size() - 1);
+		}
+
+		Map<MarginedCharacter, List<MarginedCharacter>> idMatching = new TreeMap<>();
+		for(int i = 0; i < list1.size(); ++i){
+			MarginedLine line1 = list1.get(i);
+			MarginedLine line2 = list2.get(i);
 			
 			idMatching = ImageFuzzyHashSum.mergeMaps(idMatching, line1.matchLines(line2));
 		}
 		
 		
-		List<CharMatch> charMatch = ImageFuzzyHashSum.getCharMatch(idMatching);
+		Map<MarginedCharacter, MarginedCharacter> matches = ImageFuzzyHashSum.getCharMatch(idMatching);
 		
-		return 0; 
+		int errors = 0;
+		int currentStreak = 0;
+		int longestStreak = 0;
+		
+		List<MarginedCharacter> incorrect = new ArrayList<>();
+		
+		for(int i = 0; i < list1.size(); ++i){
+			List<CharMatch> match = list1.get(i).matchByPosition(list2.get(i));
+			for(final CharMatch charMatch : match){
+				MarginedCharacter key = charMatch.getKey();
+				assert matches.containsKey(key);
+				
+				MarginedCharacter trueValue = matches.get(key);
+				MarginedCharacter checkValue = charMatch.getValue();
+				
+				if(trueValue.equals(checkValue)){
+					if(currentStreak > longestStreak){
+						longestStreak = currentStreak;
+						currentStreak = 0;
+					}
+				}
+				else{
+					++currentStreak;
+					++errors;
+					incorrect.add(checkValue);
+				}
+			}
+		}
+		
+		HashCompareResult result = new HashCompareResult(errors, longestStreak, incorrect);
+		return result;
+	}
+	
+	public void verbose(){
+		for(final MarginedLine line : this.marginedLines){
+			System.out.print(line.getCharacters().size() + " ");
+		}
+		System.out.println();
 	}
 	
 	public static void test(){

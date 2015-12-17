@@ -1,85 +1,78 @@
 package pkg1;
 
 import java.io.File;
-import java.io.IOException;
 
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
-import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+
 
 public class CharacterMatrix{
-	protected Mat character;
+	protected final Mat character;
 	
 	public CharacterMatrix(Mat character){
-		this.character = character.clone();
+		Mat charCopy = character.clone();
+		if(charCopy.channels() != 1){
+			Mat bnw = new Mat();
+			Imgproc.cvtColor(character, bnw, Imgproc.COLOR_BGR2GRAY);
+			charCopy = bnw;
+		}
+		
+		Mat thresholded = new Mat(); 
+		Imgproc.threshold(charCopy, thresholded, 127, 255, Imgproc.THRESH_BINARY);
+			
+		this.character = thresholded;
 	}
 	
-	protected Mat getImagePart(Rect rect){
-		Mat result = new Mat();
+	private static int countSamePixels(Mat image1, Mat image2){
+		Mat samePixels = new Mat();
+		Core.bitwise_xor(image1, image2, samePixels);
+		return Core.countNonZero(samePixels);
+	}
+	
+	private static double compareByPoints(final Mat img1, final Mat img2){
+		final int commonWidth  = Math.min(img1.cols(), img2.cols());
+		final int commonHeight = Math.min(img1.rows(), img2.rows());
 		
-		int top		= (int)rect.tl().y;
-		int bottom	= this.character.rows() - (int)rect.br().y;
-		int left	= (int)rect.tl().x;
-		int right	= this.character.cols() - (int)rect.br().x;
+		Rect img1rect = new Rect();
+		img1rect.x = (img1.cols() - commonWidth) / 2;
+		img1rect.y = (img1.rows() - commonHeight) / 2;
+		img1rect.height = commonHeight;
+		img1rect.width = commonWidth;
+		final Mat part1 = new Mat(img1, img1rect);
 		
-		Core.copyMakeBorder(
-			this.character,
-			result,
-			-top,
-			-bottom,
-			-left,
-			-right,
-			Core.BORDER_DEFAULT
-		);
+		Rect img2rect = new Rect();
+		img2rect.x = (img2.cols() - commonWidth) / 2;
+		img2rect.y = (img2.rows() - commonHeight) / 2;
+		img2rect.height = commonHeight;
+		img2rect.width = commonWidth;
+		final Mat part2 = new Mat(img2, img2rect);
 		
+		final int commonAreaSize = commonWidth * commonHeight;
+		final double image1Aboard = img1.size().area() - commonAreaSize;
+		final double image2Aboard = img2.size().area() - commonAreaSize;
+			
+			
+		final double differentPixels = CharacterMatrix.countSamePixels(part1, part2) + image1Aboard + image2Aboard;
+		final double score = differentPixels / (commonAreaSize + image1Aboard + image2Aboard);		
+		
+		return score;
+	}
+	
+	public double compare(CharacterMatrix characterMatrix){
+		//return double [0.0; 1.0]. 0.0 - полное совпадение, 1.0 полное различие
+		final double result = CharacterMatrix.compareByPoints(this.character, characterMatrix.character);
 		return result;
 	}
 	
-	protected static double calcDistance(Mat image1, Mat image2){
-		assert image1.type() == image2.type();
-		assert image1.size().equals(image2.size());
-		
-		double distanceSum = 0;
-		Size size = image1.size();
-		for(int row = 0; row < size.height; ++row){
-			for(int col = 0; col < size.width; ++col){
-				double[] vec1 = image1.get(row, col);
-				double[] vec2 = image2.get(row, col);
-				distanceSum += EuclidianDistance.calc(vec1, vec2);
-			}
-		}
-		double minValue = 0;
-		double maxValue = 255;
-		double rangeSize = maxValue - minValue;
-		return distanceSum / (size.area() * rangeSize);
-	}
-
-	public double compare(CharacterMatrix characterMatrix){
-		//return double [0.0; 1.0]. 0.0 - полное совпадение, 1.0 полное различие
-		Size size1 = this.character.size();
-		Size size2 = characterMatrix.character.size();
-		
-		Rect comparingPart = new Rect();//общая для обоих изображений область
-		comparingPart.height = (int)Math.max(size1.height, size2.height);
-		comparingPart.width  = (int)Math.max(size1.width,  size2.width);
-		
-		try{
-			Mat img1 = this.getImagePart(comparingPart);
-			Mat img2 = characterMatrix.getImagePart(comparingPart);
-			
-			return CharacterMatrix.calcDistance(img1, img2);
-		}
-		catch(Exception ex){
-			System.err.println(ex.getMessage());
-			return 1.0;
-		}
-	}
-	
 	public void dump(File path){
+		Mat inv = new Mat();
+		Imgproc.threshold(this.character, inv, 127, 255, Imgproc.THRESH_BINARY_INV);
+		
 		path.getParentFile().mkdirs();
-		Imgcodecs.imwrite(path.getAbsolutePath(), this.character);
+		Imgcodecs.imwrite(path.getAbsolutePath(), inv);
 	}
 	
 }
