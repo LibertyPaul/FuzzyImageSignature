@@ -11,7 +11,7 @@ public class MarginedLine{
 	
 	public MarginedLine(final List<MarginedCharacter> characters, final double relativeWidth){
 		assert characters != null;
-		assert relativeWidth > 0;
+		assert relativeWidth >= 0.0;
 		
 		this.characters = characters;
 		this.relativeWidth = relativeWidth;
@@ -27,16 +27,60 @@ public class MarginedLine{
 	
 	public String toString(final int groupSize){
 		String result = "";
+		
+		String characterCount_s = String.format("%0" + groupSize + "d", characters.size());
+		assert characterCount_s.length() == groupSize;
+		result += characterCount_s;
+		
+		final int width_i = (int)Math.round(this.relativeWidth * 1000); 
+		String lineSize_s = String.format("%0" + groupSize + "d", width_i);
+		assert lineSize_s.length() == groupSize;
+		result += lineSize_s;
+		
 		for(final MarginedCharacter character : this.characters){
-			try{
-				result += character.toString(groupSize);
-			}
-			catch(Exception e){
-				e.printStackTrace();
+			result += character.toString(groupSize);
+		}
+		return result;
+	}
+	
+	public static MarginedLine fromString(final int blockSize, final String line_s){
+		/*
+		 * формат:
+		 * <relativeSize><character0><character1>...<characterN> 
+		 */
+		
+		assert line_s.length() % blockSize == 0;
+		final String lineWidth_s = line_s.substring(0, blockSize);
+		final double lineWidth = (double)Integer.parseUnsignedInt(lineWidth_s) / 1000;
+		
+		String characters_s = line_s.substring(blockSize);
+		final int characterLength = blockSize * 2;
+		assert characters_s.length() % characterLength == 0;
+		
+		final int characterCount = characters_s.length() / characterLength;
+		List<MarginedCharacter> characters = new ArrayList<>(characterCount);
+		
+		for(int i = 0; i < characterCount; ++i){
+			final String current_s = characters_s.substring(i * characterLength, (i + 1) * characterLength);
+			final MarginedCharacter current = MarginedCharacter.fromString(blockSize, current_s);
+			characters.add(current);
+		}
+		
+		return new MarginedLine(characters, lineWidth);
+	}
+	
+	public boolean equals(final MarginedLine line){
+		if(this.characters.size() != line.characters.size()){
+			return false;
+		}
+		
+		for(int i = 0; i < this.characters.size(); ++i){
+			if(this.characters.get(i).equals(line.getCharacters().get(i)) == false){
+				return false;
 			}
 		}
-		result += String.format("%0" + groupSize + "d", 0) + String.format("%0" + groupSize + "d", (int)this.getRelativeWidth());
-		return result;
+		
+		return true;
 	}
 	
 	private MarginedCharacter getClosest(final double position){

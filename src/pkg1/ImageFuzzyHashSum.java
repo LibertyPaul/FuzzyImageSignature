@@ -1,8 +1,5 @@
 package pkg1;
 
-import java.sql.Array;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +10,7 @@ import java.util.TreeMap;
 
 public class ImageFuzzyHashSum{
 	private List<MarginedLine> marginedLines;
-	private static final int groupSizeLength = 3;
+	private static final int blockSize = 3;
 	
 	public ImageFuzzyHashSum(List<MarginedLine> marginedLines){
 		this.marginedLines = marginedLines;
@@ -22,71 +19,45 @@ public class ImageFuzzyHashSum{
 	@Override
 	public String toString(){
 		/*
-		 * Формат строки : X[[GM]*SP]+
-		 * X - размер группы. X.length = groupSizeLength
-		 * G - значение id. Если G.length < X, то добавляются нули слева. G.length <= X
-		 * M - относительнае позиция в строке
-		 * S - сепаратор. S = 0 * X раз
-		 * P - размер строки * 1000 / размер страницы
-		 * 
-		 * P.S. тут должны быть только десятичные числа,
-		 * т.к. QR код оптимизирует их хранение, в сравнении с обычными символами
+		 * Формат строки : <lineCount><characterCount1><line1><characterCount2><line2>...<characterCountN><lineN>, N == lineCount
 		 *  
 		 */
 		
-		int groupSize = 0;//кол-во десятичных разрядов для самого большого числа. (к остальным допишутся нули)
-		for(final MarginedLine line : marginedLines){
-			for(final MarginedCharacter id : line.getCharacters()){
-				groupSize = Math.max(groupSize, id.getId_s().length());
-				groupSize = Math.max(groupSize, id.getPosition_s().length());
-			}
-		}
-		assert Integer.toString(groupSize).length() <= ImageFuzzyHashSum.groupSizeLength;
-		
-		String result = String.format("%0" + ImageFuzzyHashSum.groupSizeLength + "d", groupSize);
+		String result = "";
+		String lineCount_S = String.format("%0" + ImageFuzzyHashSum.blockSize + "d", this.marginedLines.size());
+		assert lineCount_S.length() == ImageFuzzyHashSum.blockSize;
+		result += lineCount_S;
 
 		for(final MarginedLine line : marginedLines){
-			result += line.toString(groupSize);
+			String current_s = line.toString(ImageFuzzyHashSum.blockSize);
+			result += current_s;
 		}
 		
 		return result;
 	}
 	
-	public static ImageFuzzyHashSum fromString(String simpleString) throws Exception{
-		String groupSize_s = simpleString.substring(0, ImageFuzzyHashSum.groupSizeLength);
-		int groupSize = Integer.parseUnsignedInt(groupSize_s);
-		if((simpleString.length() - ImageFuzzyHashSum.groupSizeLength) % groupSize != 0){
-			throw new Exception("Incorrect hash string");
-		}
-		int blockSize = groupSize * 2;
+	public static ImageFuzzyHashSum fromString(String hash){
+		assert hash.length() >= ImageFuzzyHashSum.blockSize;
+		assert hash.length() % ImageFuzzyHashSum.blockSize == 0;
+		final String lineCount_s = hash.substring(0, ImageFuzzyHashSum.blockSize);
+		final int lineCount = Integer.parseUnsignedInt(lineCount_s);
 		
-		List<MarginedLine> marginedLines = new ArrayList<>();
-		List<MarginedCharacter> marginedCharacters = new ArrayList<>();
+		List<MarginedLine> marginedLines = new ArrayList<>(lineCount);
 		
-		//group - число записанное фиксированным количеством знаков
-		//block - несколько групп подряд
-		
-		int groupCount = (simpleString.length() - ImageFuzzyHashSum.groupSizeLength) / groupSize;
-		if(groupCount % 2 != 0){
-			throw new Exception("Incorrect hash string");
-		}
-		int blockCount = groupCount / 2;
-		
-		for(int i = 0; i < blockCount; ++i){
-			int startIndex = ImageFuzzyHashSum.groupSizeLength + i * blockSize;
-			int endIndex = startIndex + blockSize;
-			String firstGroup_s = simpleString.substring(startIndex, startIndex + groupSize);
-			String secondGroup_s = simpleString.substring(startIndex + groupSize, endIndex);
+		int pos = ImageFuzzyHashSum.blockSize;
+		for(int i = 0; i < lineCount; ++i){
+			String characterCount_s = hash.substring(pos, pos + ImageFuzzyHashSum.blockSize);
+			final int characterCount = Integer.parseUnsignedInt(characterCount_s);
+			pos += ImageFuzzyHashSum.blockSize;
 			
-			if(firstGroup_s.replaceFirst("^0*(?!$)", "").length() == 0){
-				int position = Integer.parseUnsignedInt(secondGroup_s);
-				marginedLines.add(new MarginedLine(marginedCharacters, position));
-				marginedCharacters = new ArrayList<>();
-			}
-			else{
-				marginedCharacters.add(MarginedCharacter.fromString(firstGroup_s + secondGroup_s));
-			}
+			final int lineLength = ImageFuzzyHashSum.blockSize + characterCount * ImageFuzzyHashSum.blockSize * 2;
+			String line_s = hash.substring(pos, pos + lineLength);
+			pos += lineLength;
+			
+			MarginedLine current = MarginedLine.fromString(ImageFuzzyHashSum.blockSize, line_s);
+			marginedLines.add(current);
 		}
+		
 		
 		return new ImageFuzzyHashSum(marginedLines);
 	}
@@ -197,14 +168,16 @@ public class ImageFuzzyHashSum{
 		
 		Map<MarginedCharacter, MarginedCharacter> matches = ImageFuzzyHashSum.getCharMatch(idMatching);
 		
-		int errors = 0;
+		int characterCount = 0;
 		int currentStreak = 0;
 		int longestStreak = 0;
 		
+		List<MarginedCharacter> correct   = new ArrayList<>();
 		List<MarginedCharacter> incorrect = new ArrayList<>();
 		
 		for(int i = 0; i < list1.size(); ++i){
 			List<CharMatch> match = list1.get(i).matchByPosition(list2.get(i));
+			characterCount += match.size();
 			for(final CharMatch charMatch : match){
 				MarginedCharacter key = charMatch.getKey();
 				assert matches.containsKey(key);
@@ -217,18 +190,33 @@ public class ImageFuzzyHashSum{
 						longestStreak = currentStreak;
 						currentStreak = 0;
 					}
+					correct.add(checkValue);
 				}
 				else{
 					++currentStreak;
-					++errors;
 					incorrect.add(checkValue);
 				}
 			}
 		}
 		
-		HashCompareResult result = new HashCompareResult(errors, longestStreak, incorrect);
+		HashCompareResult result = new HashCompareResult(characterCount, longestStreak, incorrect, correct);
 		return result;
 	}
+	
+	public boolean equals(final ImageFuzzyHashSum o){
+		if(this.marginedLines.size() != o.marginedLines.size()){
+			return false;
+		}
+		
+		for(int i = 0; i < this.marginedLines.size(); ++i){
+			if(this.marginedLines.get(i).equals(o.marginedLines.get(i)) == false){
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
 	
 	public void verbose(){
 		for(final MarginedLine line : this.marginedLines){

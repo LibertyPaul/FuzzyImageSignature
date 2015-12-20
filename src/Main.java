@@ -1,4 +1,5 @@
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -8,10 +9,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.imageio.ImageIO;
+
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 
 import pkg1.*;
+import qrStorage.QRHashStorage;
 import ssdeep.InMemorySsdeep;
 import ssdeep.ssdeep;
 
@@ -27,11 +31,11 @@ public class Main{
 	
 	public static void mainTest() throws Exception{
 		List<String> testImages = Arrays.asList(
-				"testPhotos/1.jpg",
+				"testPhotos/1.jpg"
 				//"testPhotos/2.jpg",
-				"testPhotos/3.jpg",
-				"testPhotos/fake/1.jpg",
-				"testPhotos/fake/2.jpg"
+				//"testPhotos/3.jpg",
+				//"testPhotos/fake/1.jpg",
+				//"testPhotos/fake/2.jpg"
 				//"testPhotos/4.jpg",
 				//"testPhotos/5.jpg",
 				//"testPhotos/6.jpg"
@@ -63,170 +67,47 @@ public class Main{
 			infoParts.add(infoPart);
 			hashes.add(hash);
 			hash.verbose();
+			
+			
+
+			QRHashStorage qrHashStorage = new QRHashStorage(hash.toString(), "");
+			List<BufferedImage> images = qrHashStorage.generateQRCodes();
+			int i = 0;
+			for(final BufferedImage bufferedImage : images){
+				ImageIO.write(bufferedImage, "png", new File("./qrcode" + i++ + ".png"));
+			}
 		}
 		
 		assert hashes.size() == infoParts.size();
 		
 		for(int first = 0; first < hashes.size() - 1; ++first){
 			for(int second = first + 1; second < hashes.size(); ++second){
-				HashCompareResult res = hashes.get(first).compare(hashes.get(second));
-				System.out.printf("%d <=> %d : %f\n", first, second, res.getScore());
+				ImageFuzzyHashSum hash1 = hashes.get(first);
+				ImageFuzzyHashSum hash2 = hashes.get(second);
 				
-				Mat withErrors = res.putErrors(infoParts.get(first));
-				Imgcodecs.imwrite("withErrors" + first + "-" + second + ".png", withErrors);
+				ImageFuzzyHashSum hash2_restored = ImageFuzzyHashSum.fromString(hash2.toString());
+				
+				HashCompareResult res = hash1.compare(hash2_restored);
+				System.out.println(hash2_restored.toString());
+				System.out.printf("%d <=> %d : %s\n", first, second, res.isGenuine());
+				
+				Mat withErrors = res.drawIncorrect(infoParts.get(first));
+				Mat withAll = res.drawCorrect(withErrors);
+				Imgcodecs.imwrite("withErrors" + first + "-" + second + ".png", withAll);
 			}
 		}
 		
 		
 		System.out.println("done.");
 	}
-	
-
-	
-	public static void getCharImages(){
-		ImageRecognizer ir = new ImageRecognizer("testPhotos/1.jpg");
-		Mat infoPart = null;
-		Mat codePart = null;
 		
-		try{
-			infoPart = ir.getInfoPart();
-			Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
-			codePart = ir.getCodePart();
-			Imgcodecs.imwrite("10.codePart.jpg", codePart);
-		}
-		catch(Exception ex){
-			System.err.println(ex.getMessage());
-			return;
-		}
-		
-		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
-		hasher.dumpChars(new File("chars/"));
-		hasher.dumpUnique(new File("uniqueChars/"));
-		
-	}
-	
-	public static void testLinePage(){
-		ImageRecognizer ir = new ImageRecognizer("testPhotos/1.jpg");
-		Mat infoPart = null;
-		Mat codePart = null;
-		
-		try{
-			infoPart = ir.getInfoPart();
-			Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
-			codePart = ir.getCodePart();
-			Imgcodecs.imwrite("10.codePart.jpg", codePart);
-		}
-		catch(Exception ex){
-			System.err.println(ex.getMessage());
-			return;
-		}
-		
-		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
-		CharactersStatistics cs = hasher.getCharactersStatistics();
-		LinePage lp = cs.createLinePage();
-		Mat withLines = lp.drawLines(infoPart);
-		Imgcodecs.imwrite("15.WithLines.png", withLines);
-	}
-	
-	public static ImageFuzzyHashSum getHash(String path) throws Exception{
-		ImageRecognizer ir = new ImageRecognizer(path);
-		
-		Mat infoPart = ir.getInfoPart();
-		Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
-		Mat codePart = ir.getCodePart();
-		Imgcodecs.imwrite("10.codePart.jpg", codePart);
-		
-		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
-		return hasher.getImageFuzzyHash();
-	}
-	
-	public static void testHash() throws Exception{
-		ImageFuzzyHashSum sum1 = getHash("testPhotos/3.jpg");
-		ImageFuzzyHashSum sum2 = getHash("testPhotos/2.jpg");
-		
-		System.out.println(sum1.toString());
-		System.out.println(sum2.toString());
-	}
-	
-	public static void testCharMatrixComparsion(){
-		ImageRecognizer ir = new ImageRecognizer("testPhotos/3.jpg");
-		Mat infoPart = null;
-		Mat codePart = null;
-		
-		try{
-			infoPart = ir.getInfoPart();
-			Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
-			codePart = ir.getCodePart();
-			Imgcodecs.imwrite("10.codePart.jpg", codePart);
-		}
-		catch(Exception ex){
-			System.err.println(ex.getMessage());
-			return;
-		}
-		
-		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
-		hasher.testCharMatrixComparsion();
-	}
-	
-	public static void testCharsComparsion(){
-		List<String> filePaths = Arrays.asList(
-			"/home/libertypaul/programming/FuzzySignature/chars/870698190..1634198.bmp",
-			"/home/libertypaul/programming/FuzzySignature/chars/870698190..12209492.bmp",
-			"/home/libertypaul/programming/FuzzySignature/chars/1450821318..5592464.bmp",
-			"/home/libertypaul/programming/FuzzySignature/chars/1450821318..104739310.bmp",
-			"/home/libertypaul/programming/FuzzySignature/chars/1740000325..1142020464.bmp",	
-			"/home/libertypaul/programming/FuzzySignature/chars/1740000325..1626877848.bmp",
-			"/home/libertypaul/programming/FuzzySignature/chars/1744347043..59559151.bmp",
-			"/home/libertypaul/programming/FuzzySignature/chars/1744347043..99747242.bmp"
-		);
-		
-		List<CharacterMatrix> characterMatrices = new ArrayList<>(filePaths.size());
-		for(final String path : filePaths){
-			Mat image = Imgcodecs.imread(path);
-			CharacterMatrix current = new CharacterMatrix(image);
-			characterMatrices.add(current);
-		}
-		
-		for(int first = 0; first < characterMatrices.size() - 1; ++first){
-			for(int second = first + 1; second < characterMatrices.size(); ++second){
-				CharacterMatrix o1 = characterMatrices.get(first);
-				CharacterMatrix o2 = characterMatrices.get(second);
-				
-				double result = o1.compare(o2);
-				System.out.printf("%d <-> %d = %f\n", first, second, result);
-			}
-		}
-	}
-	
-	public static void testCharStats(){
-		
-		ImageRecognizer ir = new ImageRecognizer("testPhotos/3.jpg");
-		Mat infoPart = null;
-		Mat codePart = null;
-		
-		try{
-			infoPart = ir.getInfoPart();
-			Imgcodecs.imwrite("9.infoPart.jpg", infoPart);
-			codePart = ir.getCodePart();
-			Imgcodecs.imwrite("10.codePart.jpg", codePart);
-		}
-		catch(Exception ex){
-			System.err.println(ex.getMessage());
-			return;
-		}
-		
-		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
-		hasher.testCharStat();
-	}
 	
 	public static void subMain() throws Exception{
 		Main.mainTest();
-		//Main.getCharImages();
-		//Main.testLinePage();
-		//Main.testHash();
-		//Main.testCharMatrixComparsion();
-		//Main.testCharsComparsion();
-		//Main.testCharStats();
+		
+		
+		
+		
 	}
 	
 	

@@ -8,15 +8,15 @@ public class MarginedCharacter implements Comparable<MarginedCharacter>{
 	private final CharacterId id;
 	private final Rect rect;
 	
-	public MarginedCharacter(final double position, final CharacterId id, final Rect rect) throws Exception{
-		assert position >= 0;
+	public MarginedCharacter(final double position, final CharacterId id, final Rect rect){
+		assert position >= 0 && position <= 1.0;
 		
 		this.position = position;
 		this.id = id;
 		this.rect = rect;
 	}
 	
-	public MarginedCharacter(final double position, final CharacterId id) throws Exception{
+	public MarginedCharacter(final double position, final CharacterId id){
 		this(position, id, null);
 	}
 	
@@ -39,7 +39,7 @@ public class MarginedCharacter implements Comparable<MarginedCharacter>{
 	}
 	
 	private int getIntegerPosition(){
-		return (int)Math.round(this.position * strBlockPrecision);
+		return (int)Math.round(this.position * MarginedCharacter.strBlockPrecision);
 	}
 	
 	public String getPosition_s(){
@@ -50,33 +50,25 @@ public class MarginedCharacter implements Comparable<MarginedCharacter>{
 		return this.id.toString();
 	}
 
-	public String toString(final int blockSize) throws Exception{
+	public String toString(final int blockSize){
 		assert blockSize > 0;
 		
-		
 		String id_s = this.id.toString(blockSize);
+		String position_s = String.format("%0" + blockSize + "d", this.getIntegerPosition());
+		assert position_s.length() == blockSize;
 
-		int intPos = this.getIntegerPosition();
-		if(intPos == 0){
-			intPos = 1;//нельзя вставлять нулевое значение
-		}
-		String position_s = String.format("%0" + blockSize + "d", intPos);
-		if(position_s.length() != blockSize){
-			throw new Exception("Incorrect spaceBefore_s length");
-		}
 		return id_s + position_s;
 	}
 	
-	public static MarginedCharacter fromString(String string) throws Exception{
-		assert string.length() % 2 == 0;
+	public static MarginedCharacter fromString(final int blockSize, final String character_s){
+		assert character_s.length()  == blockSize * 2;
 		
-		int blockSize = string.length() / 2;
-		
-		String id_s = string.substring(0, blockSize).replaceFirst("^0*(?!$)", "");
-		String spaceBefore_s = string.substring(blockSize, blockSize * 2).replaceFirst("^0*(?!$)", "");
-		
+		String id_s = character_s.substring(0, blockSize);
 		CharacterId id = CharacterId.fromString(id_s);
-		int spaceBefore = Integer.parseUnsignedInt(spaceBefore_s);
+		
+		String spaceBefore_s = character_s.substring(blockSize);
+		int spaceBefore_i = Integer.parseUnsignedInt(spaceBefore_s);
+		double spaceBefore = (double)spaceBefore_i / MarginedCharacter.strBlockPrecision;
 		
 		return new MarginedCharacter(spaceBefore, id);
 	}

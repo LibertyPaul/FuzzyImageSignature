@@ -36,11 +36,10 @@ public final class CharacterId implements Comparable<CharacterId>{
 		return Integer.toString(this.id);
 	}
 	
-	public String toString(final int blockSize) throws Exception{
+	public String toString(final int blockSize){
 		String id_s = String.format("%0" + blockSize + "d", this.id);
-		if(id_s.length() != blockSize){
-			throw new Exception("Incorrect id_s length");
-		}
+		assert id_s.length() == blockSize;
+		
 		return id_s;
 	}
 	
