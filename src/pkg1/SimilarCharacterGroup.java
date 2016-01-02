@@ -1,11 +1,13 @@
 package pkg1;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
+
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
 
 public class SimilarCharacterGroup implements Comparable<SimilarCharacterGroup>{
 	protected List<DetectedCharacter> characterList;
@@ -78,4 +80,16 @@ public class SimilarCharacterGroup implements Comparable<SimilarCharacterGroup>{
 			cm.getMatrix().dump(new File(path.getAbsolutePath() + "." + currentId + ".bmp"));
 		}
 	}
+	
+	public void dumpToImage(final Mat srcMat, final Scalar color){
+		for(final DetectedCharacter character : this.characterList){
+			Imgproc.rectangle(srcMat, character.getRect().tl(), character.getRect().br(), color, 2);
+		}
+	}
 }
+
+
+
+
+
+

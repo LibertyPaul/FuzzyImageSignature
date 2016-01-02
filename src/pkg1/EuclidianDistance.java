@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import javafx.scene.effect.Light.Distant;
-
-import com.sun.istack.internal.FinalArrayList;
 
 public class EuclidianDistance{	
 	private static List<Double> arrayToList(final double[] vec){

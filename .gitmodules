@@ -1,0 +1,3 @@
+[submodule "libs/zxing"]
+	path = libs/zxing
+	url = https://github.com/zxing/zxing.git

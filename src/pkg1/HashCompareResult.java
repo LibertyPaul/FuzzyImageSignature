@@ -36,7 +36,6 @@ public class HashCompareResult{
 	private double getLongestStreakProbability(){
 		//считает вероятность возникновения последовательности из N ошибок при вероятности одиночной ошибки
 		double streakProb = 1;
-		int streakSize = this.longestError;
 		
 		for(int i = 0; i < this.longestError; ++i){
 			streakProb *= (double)(this.getErrorCount() - i) / (this.getCharacterCount() - i);
@@ -65,7 +64,7 @@ public class HashCompareResult{
 		final Mat srcCopy = srcImage.clone();
 		
 		for(final MarginedCharacter mc : characters){
-			Imgproc.rectangle(srcCopy, mc.getRect().tl(), mc.getRect().br(), color);
+			Imgproc.rectangle(srcCopy, mc.getRect().tl(), mc.getRect().br(), color, 2);
 		}
 		
 		return srcCopy;

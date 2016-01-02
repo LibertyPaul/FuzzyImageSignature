@@ -1,10 +1,13 @@
 package pkg1;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
+
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
 
 public class CharactersStatistics{
 	protected List<SimilarCharacterGroup> characterGroups;
@@ -107,6 +110,16 @@ public class CharactersStatistics{
 			int id = System.identityHashCode(scg);
 			scg.dumpCharacter(new File(path.getAbsolutePath() + "/" + id + "."));
 		}
+	}
+	
+	public Mat dumpGroupsToImage(final Mat srcImage){
+		final Mat srcCopy = srcImage.clone();
+		final Random rg = new Random();
+		for(final SimilarCharacterGroup group : this.characterGroups){
+			final Scalar groupColor = new Scalar(rg.nextInt(256), rg.nextInt(256), rg.nextInt(256));
+			group.dumpToImage(srcCopy, groupColor);
+		}
+		return srcCopy;
 	}
 }
 

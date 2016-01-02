@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.opencv.core.Mat;
@@ -44,7 +43,6 @@ public class ImageFuzzyHash{
 		final double heightError	= rect.height * verticalCount / this.thresholded.rows();
 		final double widthError		= rect.width * horizontalCount / this.thresholded.cols();
 		//errors - при правильных значениях получаем результат около 1.
-		
 		final double acceptableError = 0.66;
 		assert acceptableError >= 0 && acceptableError <= 1;
 		
@@ -101,6 +99,9 @@ public class ImageFuzzyHash{
 	
 	protected ImageFuzzyHashSum calcImageHash() throws Exception{
 		CharactersStatistics charStats = this.getCharactersStatistics();
+		
+		Mat withGroups = charStats.dumpGroupsToImage(this.srcImage);
+		Imgcodecs.imwrite("withGroups.png", withGroups);
 		
 		LinePage linePage = charStats.createLinePage();
 		List<MarginedLine> characterLines = linePage.getOrderedCharacterLines(this.thresholded.width());

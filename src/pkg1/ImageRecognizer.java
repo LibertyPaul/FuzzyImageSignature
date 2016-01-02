@@ -2,7 +2,6 @@ package pkg1;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -24,19 +23,19 @@ public class ImageRecognizer{
 	private Mat getPreparedImage(){
 		Mat bnw = new Mat();
 		Imgproc.cvtColor(this.srcImage, bnw, Imgproc.COLOR_BGR2GRAY);
-		Imgcodecs.imwrite("1.bnw.png", bnw);
+		Imgcodecs.imwrite("debug/1.bnw.png", bnw);
 		
 		Mat blurred = new Mat();
 		Imgproc.GaussianBlur(bnw, blurred, new Size(3, 3), 5.0);
-		Imgcodecs.imwrite("2.blurred.png", blurred);
+		Imgcodecs.imwrite("debug/2.blurred.png", blurred);
 		
 		Mat edges = new Mat();
 		Imgproc.Canny(blurred, edges, 50, 175);
-		Imgcodecs.imwrite("3.edges.png", edges);
+		Imgcodecs.imwrite("debug/3.edges.png", edges);
 		
 		Mat dilated = new Mat();
 		Imgproc.dilate(edges, dilated, new Mat(), new Point(-1, -1), 2);
-		Imgcodecs.imwrite("4.dilated.png", dilated);
+		Imgcodecs.imwrite("debug/4.dilated.png", dilated);
 		
 		return dilated;
 	}
@@ -58,12 +57,13 @@ public class ImageRecognizer{
 		Mat image = this.getPreparedImage();
 		
 		List<MatOfPoint> contours = new ArrayList<>();
-		Imgproc.findContours(image, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+		Imgproc.findContours(image, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+		/*
 		if(contours.size() < 6){//похоже, что найден внешний контур, а не квадратики
 			System.out.println("contours.size() < 6");
 			Imgproc.findContours(image, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
 		}
-		
+		*/
 		List<MatOfPoint> acceptedCountors = new ArrayList<>();
 
 		Mat src = this.srcImage.clone();
@@ -84,10 +84,13 @@ public class ImageRecognizer{
 				Imgproc.isContourConvex(new MatOfPoint(approxCurve2f.toArray()))
 			){
 				acceptedCountors.add(current);
-				Imgproc.drawContours(src, dummy, dummy.size() - 1, new Scalar(255, 255, 0), 2);
+				Imgproc.drawContours(src, dummy, dummy.size() - 1, new Scalar(255, 255, 0), 4);
+			}
+			else{
+				Imgproc.drawContours(src, dummy, dummy.size() - 1, new Scalar(0, 0, 255), 4);
 			}
 		}
-		Imgcodecs.imwrite("6.with_contours.png", src);
+		Imgcodecs.imwrite("debug/6.with_contours.png", src);
 		
 		return acceptedCountors;
 	}
@@ -129,7 +132,7 @@ public class ImageRecognizer{
 		
 		double proportion = distance1 / distance2;
 		
-		return proportion > 3 && proportion < 7;
+		return proportion > 2 && proportion < 7;
 	}
 	
 	protected double getRelativeSize(Point p1, Point p2){
@@ -157,7 +160,7 @@ public class ImageRecognizer{
 		
 		for(ThreePoints line : lines){
 			Scalar color = new Scalar(rg.nextInt(255), rg.nextInt(255), rg.nextInt(255));
-			Imgproc.line(image, line.getFirst(), line.getLast(), color, 2, Core.LINE_4, 0);
+			Imgproc.line(image, line.getFirst(), line.getLast(), color, 3, Core.LINE_4, 0);
 			
 			int radius = (int)this.getAnchorSize();
 			Imgproc.circle(image, line.getFirst(), radius, color, 5, Core.FILLED, 0);
@@ -213,7 +216,7 @@ public class ImageRecognizer{
 			}
 		}
 
-		this.dumpImageWithLines("7.withAllLines.jpg", allLines);
+		this.dumpImageWithLines("debug/7.withAllLines.jpg", allLines);
 		
 		List<ThreePoints> lines = new ArrayList<>();
 		for(ThreePoints line : allLines){
@@ -232,12 +235,19 @@ public class ImageRecognizer{
 			lines.add(line);
 		}
 		
-		this.dumpImageWithLines("8.withLines.jpg", lines);
+		this.dumpImageWithLines("debug/8.withLines.jpg", lines);
 		
 		List<AngleBetweenLines> angles = new ArrayList<>();
 		for(int first = 0; first < lines.size() - 1; ++first){
 			for(int second = first + 1; second < lines.size(); ++second){
-				AngleBetweenLines current = new AngleBetweenLines(lines.get(first), lines.get(second), ThreePoints.getAngle(lines.get(first), lines.get(second)));
+				ThreePoints o1 = lines.get(first);
+				ThreePoints o2 = lines.get(second);
+				
+				if(ThreePoints.getDistance(o1.getFirst(), o2.getFirst()) < 500){
+					continue;
+				}
+				
+				AngleBetweenLines current = new AngleBetweenLines(o1, o2, ThreePoints.getAngle(o1, o2));
 				angles.add(current);
 			}
 		}
@@ -382,11 +392,11 @@ public class ImageRecognizer{
 			this.leftBound.getFirst(), this.rightBound.getFirst(),
 			this.rightBound.getBetween(), this.leftBound.getBetween()
 		);
-		Imgcodecs.imwrite("12.withAnchors.png", withAnchors);
+		Imgcodecs.imwrite("debug/12.withAnchors.png", withAnchors);
 		
 		int anchorSize = (int) ImageRecognizer.getAnchorSize(withAnchors.cols(), withAnchors.rows());
 		Mat withoutAnchors = ImageRecognizer.cutSides(withAnchors, anchorSize);
-		Imgcodecs.imwrite("13.withoutAnchors.png", withoutAnchors);
+		Imgcodecs.imwrite("debug/13.withoutAnchors.png", withoutAnchors);
 		
 		//Mat trimmed = ImageRecognizer.trim(withoutAnchors);
 		//return trimmed;

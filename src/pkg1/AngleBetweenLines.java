@@ -8,6 +8,9 @@ public class AngleBetweenLines implements Comparable<AngleBetweenLines>{
 	public AngleBetweenLines(ThreePoints line1, ThreePoints line2, double angle){
 		this.line1 = line1;
 		this.line2 = line2;
+		while(angle < 0){
+			angle += Math.PI * 2 ;
+		}
 		this.angle = angle; 
 	}
 
