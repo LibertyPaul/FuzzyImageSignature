@@ -1,9 +1,8 @@
+*~
 /*.png
 /*.bmp
 /*.jpg
 /testPhotos/
-/bin/
+/bin/*
 /chars/
-.classpath
-.project
 differences.txt
