@@ -14,6 +14,7 @@ import org.opencv.imgcodecs.Imgcodecs;
 
 import pkg1.*; 
 import qrStorage.QRHashStorage;
+import recognition.ImageRecognizer;
 
 public class Main{
 	static{
@@ -205,7 +206,7 @@ public class Main{
 	public static void main(String[] args){
 		try{
 			String currentPath = new File(".").getCanonicalPath();
-			System.load(currentPath + "/libs/OpenCV/native/libopencv_java300.so");
+			System.load(currentPath + "/libs/OpenCV/native/" + Core.NATIVE_LIBRARY_NAME);
 			new File("debug/dummy").mkdirs();
 		}
 		catch(IOException e1){

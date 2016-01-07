@@ -1,4 +1,4 @@
-package pkg1;
+package recognition;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,7 +35,7 @@ public class EuclidianDistance{
 		return EuclidianDistance.calc(EuclidianDistance.calcDiff(vec1, vec2));
 	}
 	
-	protected static <T extends Number> double calc(List<T> vec){
+	public static <T extends Number> double calc(List<T> vec){
 		//считает дистанцию вектора diff и нулевого вектора
 		double result = 0;
 		for(final T value : vec){

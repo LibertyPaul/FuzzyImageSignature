@@ -1,4 +1,4 @@
-package pkg1;
+package recognition;
 
 public class AngleBetweenLines implements Comparable<AngleBetweenLines>{
 	public final ThreePoints line1;

@@ -1,4 +1,4 @@
-package pkg1;
+package recognition;
 
 import java.util.ArrayList;
 import java.util.Collections;

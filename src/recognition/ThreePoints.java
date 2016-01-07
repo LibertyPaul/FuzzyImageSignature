@@ -1,4 +1,4 @@
-package pkg1;
+package recognition;
 
 
 import org.opencv.core.Point;

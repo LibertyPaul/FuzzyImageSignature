@@ -9,6 +9,8 @@ import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
+import recognition.EuclidianDistance;
+
 public class SimilarCharacterGroup implements Comparable<SimilarCharacterGroup>{
 	protected List<DetectedCharacter> characterList;
 	
