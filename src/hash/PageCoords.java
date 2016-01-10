@@ -1,4 +1,4 @@
-package pkg1;
+package hash;
 
 import org.opencv.core.Point;
 
@@ -11,16 +11,18 @@ public class PageCoords{
 	protected Point lowerRight;
 	
 	
-	public PageCoords(	Point upperLeft, Point upperRight,
+	public PageCoords(	Point upperLeft,  Point upperRight,
 						Point middleLeft, Point middleRight,
-						Point lowerLeft, Point lowerRight) throws Exception{
+						Point lowerLeft,  Point lowerRight) throws Exception{
 		if(	upperLeft	== null ||
 			upperRight	== null ||
 			middleLeft	== null ||
 			middleRight	== null ||
 			lowerLeft	== null ||
-			lowerRight	== null)
+			lowerRight	== null
+		){
 			throw new Exception("points can't be null");
+		}
 		
 		this.upperLeft		= upperLeft;
 		this.upperRight		= upperRight;

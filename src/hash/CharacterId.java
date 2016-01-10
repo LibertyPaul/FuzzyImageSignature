@@ -1,4 +1,4 @@
-package pkg1;
+package hash;
 
 public final class CharacterId implements Comparable<CharacterId>{
 	private static int next_id = 100;//id != 0

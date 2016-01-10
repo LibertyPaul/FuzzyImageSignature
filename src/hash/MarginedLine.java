@@ -1,4 +1,4 @@
-package pkg1;
+package hash;
 
 import java.util.ArrayList;
 import java.util.List;

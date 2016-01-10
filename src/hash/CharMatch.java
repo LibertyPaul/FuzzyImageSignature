@@ -1,4 +1,5 @@
-package pkg1;
+package hash;
+
 
 public class CharMatch{
 	private final MarginedCharacter key;

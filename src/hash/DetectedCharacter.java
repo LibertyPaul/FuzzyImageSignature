@@ -1,4 +1,4 @@
-package pkg1;
+package hash;
 
 import org.opencv.core.Rect;
 
