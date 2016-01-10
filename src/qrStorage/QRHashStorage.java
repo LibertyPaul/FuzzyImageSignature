@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-
 import org.opencv.core.Mat;
 
 import com.google.zxing.BarcodeFormat;
@@ -29,9 +28,9 @@ public class QRHashStorage{
 	private final static int maxHashQRCodes = 2;
 	private final static int decimalsForId = 3;
 	private final String hashValue;
-	private final String digitalSignature;
+	private final byte[] digitalSignature;
 	
-	public QRHashStorage(final String hashValue, final String digitalSignature){
+	public QRHashStorage(final String hashValue, final byte[] digitalSignature){
 		for(final char d : hashValue.toCharArray()){
 			if(d < '0' || d > '9'){
 				throw new IllegalArgumentException("Only decimal characters are allowed");
@@ -45,7 +44,7 @@ public class QRHashStorage{
 		return this.hashValue;
 	}
 	
-	public String getSignatureValue(){
+	public byte[] getSignatureValue(){
 		return this.digitalSignature;
 	}
 	
@@ -119,7 +118,9 @@ public class QRHashStorage{
 		
 		List<BufferedImage> result = new ArrayList<BufferedImage>(qrCodeMaxId + 1);
 		
-		final String numberedDigitalSignature = QRHashStorage.addId(this.digitalSignature, 0, qrCodeMaxId);
+		
+		final String signature_s = new String(this.digitalSignature);
+		final String numberedDigitalSignature = QRHashStorage.addId(signature_s, 0, qrCodeMaxId);
 		BufferedImage bufferedSignatureQR = QRHashStorage.generateQRCode(numberedDigitalSignature);
 		result.add(bufferedSignatureQR);
 		
@@ -133,7 +134,7 @@ public class QRHashStorage{
 		return result;
 	}
 	
-	public static QRHashStorage fromQRCodes(final BufferedImage codePart) throws Exception{
+	private static List<String> getData(final BufferedImage codePart) throws Exception{
 		LuminanceSource luminanceSource = new BufferedImageLuminanceSource(codePart);
 		BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
 		QRCodeMultiReader qrMultiReader = new QRCodeMultiReader();
@@ -151,8 +152,14 @@ public class QRHashStorage{
 			values.add(results[i].getText());
 		}
 		
+		return values;
+	}
+	
+	public static QRHashStorage fromQRCodes(final BufferedImage codePart) throws Exception{		
+		List<String> values = QRHashStorage.getData(codePart);
+		
 		final int maxId = QRHashStorage.getMaxId(values.get(0));
-		if(maxId - 1 != values.size()){
+		if(maxId + 1 != values.size()){
 			throw new Exception("One or more QR-codes wasn't recognized");
 		}
 		
@@ -171,9 +178,16 @@ public class QRHashStorage{
 			}
 		}
 		
+		String hash = "";
+		for(int i = 0; i < parts.size() - 1; ++i){
+			hash += parts.get(i);
+		}
 		
+		String signature = parts.get(parts.size() - 1);
 		
-		return null;
+		QRHashStorage result = new QRHashStorage(hash, signature.getBytes());
+		
+		return result;
 		
 	}
 	
