@@ -1,4 +1,8 @@
 
+import hash.HashCompareResult;
+import hash.ImageFuzzyHash;
+import hash.ImageFuzzyHashSum;
+
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -12,7 +16,7 @@ import javax.imageio.ImageIO;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 
-import pkg1.*; 
+import qrStorage.DigitalSignature;
 import qrStorage.QRHashStorage;
 import recognition.ImageRecognizer;
 
@@ -61,8 +65,8 @@ public class Main{
 			hash.verbose();
 			
 			
-
-			QRHashStorage qrHashStorage = new QRHashStorage(hash.toString(), "");
+			
+			QRHashStorage qrHashStorage = new QRHashStorage(hash.toString(), null);
 			List<BufferedImage> images = qrHashStorage.generateQRCodes();
 			int i = 0;
 			for(final BufferedImage bufferedImage : images){
@@ -91,7 +95,6 @@ public class Main{
 			}
 		}
 		
-		
 		System.out.println("done.");
 	}
 	
@@ -118,7 +121,7 @@ public class Main{
 	}
 	
 	public static void testQR2() throws Exception{
-		BufferedImage codePart = ImageIO.read(new File("qr.jpg"));
+		BufferedImage codePart = ImageIO.read(new File("qrs2.jpg"));
 		QRHashStorage qrStorage = QRHashStorage.fromQRCodes(codePart);
 		String hash = qrStorage.getHashValue();
 		System.out.println(hash);
@@ -131,56 +134,65 @@ public class Main{
 		ImageIO.write(result, "jpg", new File("./converted.jpg"));
 		
 	}
+	
+	public static void testDS() throws Exception{
+		String testData = "298356372181923846298357210341923859124710294729387510245";
+		byte[] testDataByte = testData.getBytes();
+		
+		byte[] signature = DigitalSignature.sign(testDataByte, new File("./keys/dsaprivkey.der"));
+		boolean result = DigitalSignature.verify(testDataByte, signature, new File("./keys/dsapubkey.der"));
+		
+		if(result){
+			System.out.println("testDS: OK");
+		}
+		else{
+			System.out.println("testDS: FAIL");
+		}
+	}
 		
 	
-	public static void subMain() throws Exception{
-		//Main.mainTest();
-		//Main.testMatConverter();
-		Main.testQR();
-		//Main.testQR2();
-		
-		
-		
+	public static void subMain(){
+		try{
+			//Main.mainTest();
+			//Main.testMatConverter();
+			//Main.testQR();
+			Main.testQR2();
+			//Main.testDS();
+		}
+		catch(Exception e){
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	
 	
+
 	
 	
-	private static void man(){
-		String man = "ImageFuzzyHash 0.02\n"
-				   + "Pavel Yazev, 2015\n"
-				   + "-----------------------\n"
-				   + "\n"
-				   + "Usage: \n"
-				   + "java -jar %filename%.jar -sign %imagePath% %qrCodesDstPath%\n"
-				   + "java -jar %filename%.jar -verify %imagePath% %qrPhotoPath%\n"
-				   + "\n";
-		
-		System.out.println(man);
-	}
-	
-	
-	private static void sign(final File imgPath, final Path qrCodesPath) throws Exception{
+	private static void sign(final File imgPath, final Path qrCodesDstDir, final File privateKey) throws Exception{
 		ImageRecognizer ir = new ImageRecognizer(imgPath.getAbsolutePath());
 		Mat infoPart = ir.getInfoPart();
 		
 		ImageFuzzyHash hasher = new ImageFuzzyHash(infoPart);
 		ImageFuzzyHashSum hash = hasher.getImageFuzzyHash();
 		
-		QRHashStorage qrStorage = new QRHashStorage(hash.toString(), "");
+		String hash_s = hash.toString();
+		byte[] digitalSignature = DigitalSignature.sign(hash_s.getBytes(), privateKey);
+		
+		QRHashStorage qrStorage = new QRHashStorage(hash_s, digitalSignature);
 		
 		List<BufferedImage> images = qrStorage.generateQRCodes();
 		int i = 0;
 		for(final BufferedImage bufferedImage : images){
-			qrCodesPath.toFile().mkdirs();
-			ImageIO.write(bufferedImage, "png", new File(qrCodesPath.toFile() + "/" + i++ + ".png"));
+			qrCodesDstDir.toFile().mkdirs();
+			ImageIO.write(bufferedImage, "png", new File(qrCodesDstDir.toFile() + "/" + i++ + ".png"));
 		}
 		
-		System.out.println("QR-codes was successfully generated and stored in " + qrCodesPath.toString());
+		System.out.println("QR-codes was successfully generated and stored in " + qrCodesDstDir.toString());
 	}
 	
-	private static void verify(final File imgPath, final File qrPath) throws Exception{
+	private static void verify(final File imgPath, final File qrPath, final File publicKey) throws Exception{
 		ImageRecognizer ir = new ImageRecognizer(imgPath.getAbsolutePath());
 		
 		Mat infoPart = ir.getInfoPart();
@@ -191,6 +203,14 @@ public class Main{
 		
 		BufferedImage codePart = ImageIO.read(qrPath);
 		QRHashStorage qrStorage = QRHashStorage.fromQRCodes(codePart);
+		
+		byte[] digitalSignature = qrStorage.getSignatureValue();
+		boolean isSignatireValid = DigitalSignature.verify(qrStorage.getHashValue().getBytes(), digitalSignature, publicKey);
+		if(isSignatireValid == false){
+			throw new Exception("The digital signature was forged");
+		}
+		
+		
 		ImageFuzzyHashSum checkHash = ImageFuzzyHashSum.fromString(qrStorage.getHashValue());
 		
 		HashCompareResult res = hash.compare(checkHash);
@@ -203,10 +223,33 @@ public class Main{
 		}
 	}
 	
-	public static void main(String[] args){
+	
+	private static void man(){
+		String man = "\n"
+				   + "\n"
+				   + "ImageFuzzyHash 0.03\n"
+				   + "Pavel Yazev, mailme@libertypaul.ru, 2015\n"
+				   + "-----------------------\n"
+				   + "\n"
+				   + "Usage: \n"
+				   + "java -jar %filename%.jar -sign   <imagePath> <qrCodesDstDir> <privateKeyPath>\n"
+				   + "java -jar %filename%.jar -verify <imagePath> <codePartPhoto> <publicKeyPath>\n"
+				   + "\n"
+				   + "imagePath - path to image with whole page\n"
+				   + "qrCodesDstDir - path to directory where generated QR-codes will be stored\n"
+				   + "codePartPhoto - path to photo which contains only code part of document (It's not enough resolution of most cameras to properly recognize all QR-codes from whole document photo)\n"
+				   + "private or public keyPath - path to file with DSA key(public or private) in DER format\n"
+				   + "\n";
+		
+		System.out.println(man);
+	}
+	
+	public static void cli(String[] args){
+		//System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		
 		try{
 			String currentPath = new File(".").getCanonicalPath();
-			System.load(currentPath + "/libs/OpenCV/native/" + Core.NATIVE_LIBRARY_NAME);
+			System.load(currentPath + "/libs/OpenCV/native/lib" + Core.NATIVE_LIBRARY_NAME + ".so");
 			new File("debug/dummy").mkdirs();
 		}
 		catch(IOException e1){
@@ -215,9 +258,8 @@ public class Main{
 		}
 		
 		
-		//long startTime = System.currentTimeMillis();
 		
-		if(args.length < 3){
+		if(args.length < 4){
 			System.out.println("Incorrect argList(" + args.length + ")");
 			Main.man();
 			return;
@@ -227,10 +269,10 @@ public class Main{
 		
 		try{
 			if(args[0].equals("-sign")){
-				Main.sign(new File(args[1]), new File(args[2]).toPath());
+				Main.sign(new File(args[1]), new File(args[2]).toPath(), new File(args[3]));
 			}
-			else if(args[01].equals("-verify")){
-				Main.verify(new File(args[1]), new File(args[2]));
+			else if(args[0].equals("-verify")){
+				Main.verify(new File(args[1]), new File(args[2]), new File(args[3]));
 			}
 			else{
 				System.out.println("Wrong mode(" + args[0] + ")");
@@ -244,6 +286,13 @@ public class Main{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public static void main(String[] args){
+		//long startTime = System.currentTimeMillis();
+		
+		Main.subMain();
+		//Main.cli(args);
 		
 		//long stopTime = System.currentTimeMillis();
 		//double timeMiliSec = stopTime - startTime;
